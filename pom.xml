@@ -22,4 +22,32 @@
         </repository>
     </distributionManagement>
 
+    <dependencies>
+        <dependency>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>authenticationserver</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>statisticsserver</groupId>
+            <artifactId>me.redstoner2019</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>odlayout</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>utilities</groupId>
+            <artifactId>me.redstoner2019</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>odserverapi</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+
 </project>
