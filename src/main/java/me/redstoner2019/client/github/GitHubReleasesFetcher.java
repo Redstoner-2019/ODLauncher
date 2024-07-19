@@ -6,24 +6,41 @@ import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import me.redstoner2019.Utilities;
 import me.redstoner2019.client.AuthenticatorClient;
+import me.redstoner2019.client.gui.Main;
 import me.redstoner2019.server.AuthServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class GitHubReleasesFetcher {
+import javax.print.DocFlavor;
 
+public class GitHubReleasesFetcher {
+    private static final String TOKEN = "";
     private static final String GITHUB_API_URL_TEMPLATE = "https://api.github.com/repos/%s/%s/releases";
+    public static String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(("Redstoner-2019:" + TOKEN).getBytes());
 
     public static List<String> fetchAllReleases(String owner, String repo) throws Exception {
+        System.out.println("Token used");
+        Main.printStackTrace();
+
         List<String> releases = new ArrayList<>();
         String url = String.format(GITHUB_API_URL_TEMPLATE, owner, repo);
         while (url != null) {
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
+
+            connection.addRequestProperty("Accept", "application/vnd.github.v3+json");
+
+            connection.setRequestProperty("Authorization", authHeaderValue);
+
+            if(connection.getResponseCode() == 403){
+                System.err.println("[403], API limit exceeded");
+                return new ArrayList<>();
+            }
 
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             String inputLine;
@@ -45,10 +62,24 @@ public class GitHubReleasesFetcher {
     }
 
     public static List<String> fetchAllReleaseFiles(String owner, String repo, String version) throws Exception {
+        System.out.println("Token used");
+        Main.printStackTrace();
         List<String> files = new ArrayList<>();
         URL url = new URL(String.format("https://api.github.com/repos/%s/%s/releases", owner, repo));
 
-        JSONArray data = new JSONArray(new String(url.openConnection().getInputStream().readAllBytes()));
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        connection.addRequestProperty("Accept", "application/vnd.github.v3+json");
+
+        connection.setRequestProperty("Authorization", authHeaderValue);
+
+        if(connection.getResponseCode() == 403){
+            System.err.println("403, API limit exceeded");
+            return new ArrayList<>();
+        }
+
+        JSONArray data = new JSONArray(new String(connection.getInputStream().readAllBytes()));
 
         for (int i = 0; i < data.length(); i++) {
             JSONObject object = data.getJSONObject(i);
@@ -56,12 +87,12 @@ public class GitHubReleasesFetcher {
                 JSONArray assets = object.getJSONArray("assets");
                 for (int j = 0; j < assets.length(); j++) {
                     JSONObject fileStats = assets.getJSONObject(j);
-                    System.out.println("-------------------------------------------------------------");
-                    System.out.println("Download URL: " + fileStats.getString("browser_download_url"));
-                    System.out.println("Downloads: " + fileStats.getInt("download_count"));
-                    System.out.println("Updated: " + fileStats.getString("updated_at"));
-                    System.out.println("File Size: " + fileStats.getInt("size"));
-                    System.out.println();
+                    //System.out.println("-------------------------------------------------------------");
+                    //System.out.println("Download URL: " + fileStats.getString("browser_download_url"));
+                    //System.out.println("Downloads: " + fileStats.getInt("download_count"));
+                    //System.out.println("Updated: " + fileStats.getString("updated_at"));
+                    //System.out.println("File Size: " + fileStats.getInt("size"));
+                    //System.out.println();
                     files.add(fileStats.getString("browser_download_url"));
                 }
             }

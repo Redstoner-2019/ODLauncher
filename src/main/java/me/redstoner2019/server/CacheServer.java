@@ -9,10 +9,14 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.ServerSocket;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.List;
+
+import static me.redstoner2019.client.github.GitHubReleasesFetcher.authHeaderValue;
 
 public class CacheServer {
     public static void main(String[] args) throws IOException {
@@ -29,32 +33,10 @@ public class CacheServer {
             @Override
             public void run() {
                 while (true) {
+                    refresh();
                     try {
-                        Thread.sleep(60000);
+                        Thread.sleep(600000);
                     } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        JSONObject cache = loadCache();
-                        for(String user : cache.getJSONObject("repos").keySet()){
-                            JSONObject repos = cache.getJSONObject("repos").getJSONObject(user);
-                            for(String repo : repos.keySet()){
-                                JSONArray versions = repos.getJSONArray(repo);
-
-                                List<String> versionsRequested = GitHubReleasesFetcher.fetchAllReleases(user,repo);
-
-                                for (int i = 0; i < versions.length(); i++) {
-                                    String version = versions.getString(i);
-                                    versionsRequested.remove(version);
-                                }
-
-                                for(String v : versionsRequested){
-                                    System.out.println("Found new Version for repo " + repo + ", " + user + ": " + v);
-                                    addVersion(user,repo,v);
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
@@ -72,6 +54,50 @@ public class CacheServer {
                 }
             });
             t.start();
+        }
+    }
+
+    public static void refresh(){
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL("https://api.github.com/rate_limit").openConnection();
+            connection.addRequestProperty("Accept", "application/vnd.github.v3+json");
+            connection.setRequestProperty("Authorization", authHeaderValue);
+
+            System.out.println(new String(connection.getInputStream().readAllBytes()));
+
+            JSONObject cache = loadCache();
+            for(String user : cache.getJSONObject("repos").keySet()){
+                JSONObject repos = cache.getJSONObject("repos").getJSONObject(user);
+                for(String repo : repos.keySet()){
+                    JSONObject versions = repos.getJSONObject(repo);
+
+                    List<String> versionsRequested = GitHubReleasesFetcher.fetchAllReleases(user,repo);
+
+                    for(String v : versionsRequested){
+                        if(!versions.has(v)){
+                            System.out.println("Found new Version for repo " + repo + ", " + user + ": " + v);
+                            addVersion(user,repo,v);
+                        }
+                    }
+
+                    for(String v : versionsRequested){
+                        List<String> assets = GitHubReleasesFetcher.fetchAllReleaseFiles(user,repo,v);
+                        for(String a : assets){
+                            JSONObject o = new JSONObject();
+                            o.put("filename",a);
+                            addAsset(user,repo, v, o);
+                        }
+                    }
+                }
+                connection = (HttpURLConnection) new URL("https://api.github.com/rate_limit").openConnection();
+                connection.addRequestProperty("Accept", "application/vnd.github.v3+json");
+                connection.setRequestProperty("Authorization", authHeaderValue);
+
+                System.out.println(new String(connection.getInputStream().readAllBytes()));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println(e.getLocalizedMessage());
         }
     }
 
@@ -116,8 +142,34 @@ public class CacheServer {
             addRepo(user,repo);
             cacheData = loadCache();
         }
-        JSONArray versions = repositories.getJSONArray(repo);
-        versions.put(version);
+        JSONObject versions = repositories.getJSONObject(repo);
+        versions.put(version,new JSONArray());
+        repositories.put(repo, versions);
+        repos.put(user, repositories);
+        cacheData.put("repos",repos);
+        save(cacheData);
+    }
+    public static void addAsset(String user, String repo,String version, JSONObject asset) throws IOException {
+        JSONObject cacheData = loadCache();
+        JSONObject repos = cacheData.getJSONObject("repos");
+        if(!repos.has(user)){
+            addUser(user);
+            cacheData = loadCache();
+        }
+        JSONObject repositories = repos.getJSONObject(user);
+        if(!repositories.has(repo)){
+            addRepo(user,repo);
+            cacheData = loadCache();
+        }
+        JSONObject versions = repositories.getJSONObject(repo);
+        if(!versions.has(version)){
+            addVersion(user, repo, version);
+            cacheData = loadCache();
+        }
+
+        JSONArray assets = versions.getJSONArray(version);
+        assets.put(asset);
+        versions.put(version,assets);
         repositories.put(repo, versions);
         repos.put(user, repositories);
         cacheData.put("repos",repos);

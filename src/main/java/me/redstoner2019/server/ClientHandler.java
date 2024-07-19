@@ -38,6 +38,10 @@ public class ClientHandler {
                                 case "request-data" -> {
                                     response = CacheServer.loadCache();
                                 }
+                                case "refresh" -> {
+                                    CacheServer.refresh();
+                                    response = getSuccessJSON();
+                                }
                                 case "add-user" -> {
                                     if(packet.has("user")){
                                         CacheServer.addUser(packet.getString("user"));

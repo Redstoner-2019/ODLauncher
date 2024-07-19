@@ -1,13 +1,18 @@
 package me.redstoner2019.client.gui;
 
 import me.redstoner2019.*;
+import me.redstoner2019.ODLayout;
+import me.redstoner2019.client.AuthenticatorClient;
 import me.redstoner2019.client.downloading.DownloadStatus;
 import me.redstoner2019.client.downloading.FileDownloader;
 import me.redstoner2019.client.github.GitHubReleasesFetcher;
 import me.redstoner2019.server.CacheServer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -24,8 +29,13 @@ import java.util.Scanner;
 public class Main extends JFrame {
 
     private DownloadStatus status = new DownloadStatus();
+    private JSONObject onlineData = null;
+    private JSONObject cacheData = null;
+    private boolean offlineMode = false;
+    private AuthenticatorClient authenticatorClient = new AuthenticatorClient();
+    private StatisticClient statsClient = null;
 
-    public Main() throws Exception {
+    public Main() {
         setSize(1280,720);
         setResizable(true);
         setLocationRelativeTo(null);
@@ -91,12 +101,15 @@ public class Main extends JFrame {
          */
 
         ODLayout leftLayout = new ODLayout();
+        leftLayout.addRow(new Row(20,LengthType.PIXEL));
         leftLayout.addRow(new Row(Lengths.VARIABLE));
+        leftLayout.addRow(new Row(20,LengthType.PIXEL));
         leftLayout.addRow(new Row(Lengths.VARIABLE));
 
         leftLayout.addColumn(new Column(Lengths.VARIABLE));
 
-        JList<String> versions = new JList<>();
+        DefaultListModel<String> versionModel = new DefaultListModel<>();
+        JList<String> versions = new JList<>(versionModel);
         JScrollPane versionsScroll = new JScrollPane(versions);
         leftPanel.add(versionsScroll);
 
@@ -105,8 +118,8 @@ public class Main extends JFrame {
         JScrollPane filesScroll = new JScrollPane(files);
         leftPanel.add(filesScroll);
 
-        leftLayout.registerComponent(versionsScroll,new Position(0,0));
-        leftLayout.registerComponent(filesScroll,new Position(0,1));
+        leftLayout.registerComponent(versionsScroll,new Position(0,1));
+        leftLayout.registerComponent(filesScroll,new Position(0,3));
 
         leftPanel.setLayout(leftLayout);
 
@@ -120,14 +133,22 @@ public class Main extends JFrame {
         middleLayout.addColumn(new Column(Lengths.VARIABLE));
         middleLayout.addColumn(new Column(0.2,LengthType.PERCENT));
 
-        middleLayout.addRow(new Row(Lengths.VARIABLE));
         middleLayout.addRow(new Row(40,LengthType.PIXEL));
+        middleLayout.addRow(new Row(Lengths.VARIABLE));
+        middleLayout.addRow(new Row(20,LengthType.PIXEL));
+        middleLayout.addRow(new Row(40,LengthType.PIXEL));
+
+        JTextArea infoLabel = new JTextArea();
+        infoLabel.setEditable(false);
+        infoLabel.setLineWrap(true);
 
         JButton launch = new JButton("Launch");
 
         middlePanel.add(launch);
+        middlePanel.add(infoLabel);
 
-        middleLayout.registerComponent(launch,new Position(1,1));
+        middleLayout.registerComponent(launch,new Position(1,3));
+        middleLayout.registerComponent(infoLabel,new Position(1,1));
 
         middlePanel.setLayout(middleLayout);
 
@@ -135,15 +156,68 @@ public class Main extends JFrame {
          * Right Panel
          */
 
-        ListModel<String> gamesListModel = new DefaultListModel<>();
+        ODLayout rightLayout = new ODLayout();
+        rightLayout.addRow(new Row(20,LengthType.PIXEL));
+        rightLayout.addRow(new Row(Lengths.VARIABLE));
+        rightLayout.addRow(new Row(20,LengthType.PIXEL));
+        rightLayout.addRow(new Row(Lengths.VARIABLE));
+
+        rightLayout.addColumn(new Column(Lengths.VARIABLE));
+
+        DefaultListModel<String> gamesListModel = new DefaultListModel<>();
         JList<String> games = new JList<>(gamesListModel);
         JScrollPane gamesScroll = new JScrollPane(games);
         rightPanel.add(gamesScroll);
-        rightPanel.setLayout(new GridLayout());
-        games.setListData(new String[]{"ODGraphics", "FNaF"});
 
+        DefaultListModel<String> authorModel = new DefaultListModel<>();
+        JList<String> authors = new JList<>(authorModel);
+        JScrollPane authorScroll = new JScrollPane(authors);
+        rightPanel.add(authorScroll);
 
-        games.addListSelectionListener(e -> {
+        rightLayout.registerComponent(gamesScroll,new Position(0,3));
+        rightLayout.registerComponent(authorScroll,new Position(0,1));
+
+        rightPanel.setLayout(rightLayout);
+
+        List<String> filesList = new ArrayList<>();
+
+        authors.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                JSONObject gamesObject = cacheData.getJSONObject("repos").getJSONObject(authors.getSelectedValue());
+                gamesListModel.clear();
+                gamesListModel.addAll(gamesObject.keySet());
+            }
+        });
+
+        games.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                JSONObject versionsObject = cacheData.getJSONObject("repos").getJSONObject(authors.getSelectedValue()).getJSONObject(games.getSelectedValue());
+                versionModel.clear();
+                versionModel.addAll(versionsObject.keySet());
+            }
+        });
+
+        versions.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                JSONArray assets = cacheData.getJSONObject("repos").getJSONObject(authors.getSelectedValue()).getJSONObject(games.getSelectedValue()).getJSONArray(versions.getSelectedValue());
+                filesModel.clear();
+                for (int i = 0; i < assets.length(); i++) {
+                    filesModel.add(i,assets.getJSONObject(i).getString("filename"));
+                }
+            }
+        });
+
+        files.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+
+            }
+        });
+
+        /*games.addListSelectionListener(e -> {
             if(games.getSelectedValue() != null) {
                 Thread t = new Thread(() -> {
                     List<String> versionsList = null;
@@ -158,7 +232,7 @@ public class Main extends JFrame {
             }
         });
 
-        List<String> filesList = new ArrayList<>();
+
         versions.addListSelectionListener(e -> {
             if(versions.getSelectedValue() != null && games.getSelectedValue() != null) {
                 filesList.clear();
@@ -175,6 +249,17 @@ public class Main extends JFrame {
                 }
             }
         });
+
+        files.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                try {
+                    infoLabel.setText(CacheServer.prettyJSON(FileDownloader.getFileInfo("Redstoner-2019",games.getSelectedValue(),versions.getSelectedValue(),files.getSelectedValue()).toString()));
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });*/
 
         Main main = this;
 
@@ -215,46 +300,6 @@ public class Main extends JFrame {
                 } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
-                /*if(versions.getSelectedValue() != null && games.getSelectedValue() != null) {
-                    String url = "";
-                    try {
-                        for(String s : files){
-                            System.out.println(s);
-                            if(s.contains(Utilities.getPlatform())){
-                                url = s;
-                                break;
-                            }
-                        }
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
-                    downloadFile(url, "download.jar", status);
-
-                    Thread t = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            while (!status.isComplete()){
-                                try {
-                                    Thread.sleep(100);
-                                } catch (InterruptedException ex) {
-                                    throw new RuntimeException(ex);
-                                }
-                            }
-                            System.out.println("Starting");
-                            try {
-                                Process p = Runtime.getRuntime().exec("java -jar download.jar");
-                                Scanner scanner = new Scanner(p.getInputStream());
-                                while (p.isAlive()) {
-                                    System.out.println(scanner.nextLine());
-                                }
-                            } catch (IOException ex) {
-                                throw new RuntimeException(ex);
-                            }
-                        }
-                    });
-                    t.start();
-                }
-                else System.out.println("Null");*/
             }
         });
 
@@ -264,17 +309,60 @@ public class Main extends JFrame {
 
         setVisible(true);
 
+        try{
+            onlineData = Utilities.getIPData();
+            System.out.println(onlineData);
+        }catch (Exception ignored){
+            offlineMode = true;
+            JOptionPane.showMessageDialog(this,"Couldn't retrieve ip data. Switching to offline mode.","Error",JOptionPane.ERROR_MESSAGE);
+        }
+
+        try{
+            cacheData = runCacheCommand(new JSONObject("{\"header\":\"request-data\"}"));
+            JSONObject authorsObject = cacheData.getJSONObject("repos");
+            authorModel.clear();
+            authorModel.addAll(authorsObject.keySet());
+        }catch (Exception ignored){
+            offlineMode = true;
+            JOptionPane.showMessageDialog(this,"Couldn't retrieve cache server data. Switching to offline mode.","Error",JOptionPane.ERROR_MESSAGE);
+        }
+
+        try{
+            if(!offlineMode){
+                authenticatorClient.setAddress(onlineData.getString("auth-server"));
+                authenticatorClient.setPort(onlineData.getInt("auth-server-port"));
+
+                authenticatorClient.setup();
+            }
+        }catch (Exception ignored){
+            offlineMode = true;
+            JOptionPane.showMessageDialog(this,"Couldn't connect to auth Server. Switching to offline mode.","Error",JOptionPane.ERROR_MESSAGE);
+        }
+
+        try{
+            if(!offlineMode){
+                statsClient = new StatisticClient(onlineData.getString("statistics-server"),onlineData.getInt("statistics-server-port"));
+                statsClient.sendRequest(new JSONObject());
+            }
+        }catch (Exception ignored){
+            offlineMode = true;
+            JOptionPane.showMessageDialog(this,"Couldn't connect to auth Server. Switching to offline mode.","Error",JOptionPane.ERROR_MESSAGE);
+        }
+
         Thread console = new Thread(new Runnable() {
             @Override
             public void run() {
                 Scanner scanner = new Scanner(System.in);
-                while (true) {
+                while (!offlineMode) {
                     System.out.println("Command?");
                     String command = scanner.nextLine();
                     JSONObject request = new JSONObject();
                     switch (command) {
                         case "get" -> {
                             request.put("header","request-data");
+                        }
+                        case "refresh" -> {
+                            request.put("header","refresh");
                         }
                         case "add-user" -> {
                             request.put("header","add-user");
@@ -305,14 +393,18 @@ public class Main extends JFrame {
                         }
                     }
                     try {
-                        Socket socket = new Socket("localhost",8001);
+                        System.out.println("request " + request);
+                        String host = onlineData.getString("cache-server");
+                        int port = onlineData.getInt("cache-server-port");
+                        Socket socket = new Socket(host,port);
                         ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                         ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
                         oos.writeObject(request.toString());
                         JSONObject result = new JSONObject((String) ois.readObject());
                         System.out.println(CacheServer.prettyJSON(result.toString()));
                     } catch (IOException | ClassNotFoundException e) {
-                        throw new RuntimeException(e);
+                        JOptionPane.showMessageDialog(main,"Couldn't connect to Cache Server. Switching to offline mode.","Error",JOptionPane.ERROR_MESSAGE);
+                        offlineMode = true;
                     }
                 }
             }
@@ -328,5 +420,32 @@ public class Main extends JFrame {
     }
     public static void main(String[] args) throws Exception {
         new Main();
+    }
+
+    public JSONObject runCacheCommand(JSONObject request){
+        if(offlineMode) return null;
+        try {
+            String host = onlineData.getString("cache-server");
+            int port = onlineData.getInt("cache-server-port");
+            Socket socket = new Socket(host,port);
+            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            oos.writeObject(request.toString());
+            JSONObject result = new JSONObject((String) ois.readObject());
+            return result;
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this,"Couldn't connect to Cache Server. Switching to offline mode.","Error",JOptionPane.ERROR_MESSAGE);
+            offlineMode = true;
+            return null;
+        }
+    }
+
+    public static void printStackTrace() {
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+        // Start from index 1 to skip the getStackTrace() method itself
+        for (int i = 1; i < stackTraceElements.length; i++) {
+            System.out.println(stackTraceElements[i]);
+        }
     }
 }
