@@ -6,7 +6,7 @@
 
     <groupId>me.redstoner2019</groupId>
     <artifactId>odlauncher</artifactId>
-    <version>1.0.2</version>
+    <version>1.0-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -22,31 +22,37 @@
         </repository>
     </distributionManagement>
 
-    <repositories>
-        <repository>
-            <id>sonatype</id>
-            <name>Sonatype</name>
-            <url>https://repository.sonatype.org/content/groups/public/</url>
-        </repository>
-    </repositories>
-
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/org.json/json -->
         <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20240303</version>
+            <groupId>com.vladsch.flexmark</groupId>
+            <artifactId>flexmark-all</artifactId>
+            <version>0.62.2</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.17.2</version>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>authenticationserver</artifactId>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>statisticsserver</groupId>
             <artifactId>me.redstoner2019</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>odlayout</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>utilities</groupId>
+            <artifactId>me.redstoner2019</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>odserverapi</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 

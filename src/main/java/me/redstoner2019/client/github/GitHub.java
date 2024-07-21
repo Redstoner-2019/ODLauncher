@@ -2,31 +2,21 @@ package me.redstoner2019.client.github;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-import me.redstoner2019.Utilities;
-import me.redstoner2019.client.AuthenticatorClient;
-import me.redstoner2019.client.gui.Main;
-import me.redstoner2019.server.AuthServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.print.DocFlavor;
-
-public class GitHubReleasesFetcher {
-    private static final String TOKEN = "";
+public class GitHub {
+    private static final String TOKEN = "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";
     private static final String GITHUB_API_URL_TEMPLATE = "https://api.github.com/repos/%s/%s/releases";
     public static String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(("Redstoner-2019:" + TOKEN).getBytes());
 
     public static List<String> fetchAllReleases(String owner, String repo) throws Exception {
-        System.out.println("Token used");
-        Main.printStackTrace();
-
         List<String> releases = new ArrayList<>();
         String url = String.format(GITHUB_API_URL_TEMPLATE, owner, repo);
         while (url != null) {
@@ -61,10 +51,8 @@ public class GitHubReleasesFetcher {
         return releases;
     }
 
-    public static List<String> fetchAllReleaseFiles(String owner, String repo, String version) throws Exception {
-        System.out.println("Token used");
-        Main.printStackTrace();
-        List<String> files = new ArrayList<>();
+    public static List<JSONObject> fetchAllReleaseFiles(String owner, String repo, String version) throws Exception {
+        List<JSONObject> fileData = new ArrayList<>();
         URL url = new URL(String.format("https://api.github.com/repos/%s/%s/releases", owner, repo));
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -87,17 +75,19 @@ public class GitHubReleasesFetcher {
                 JSONArray assets = object.getJSONArray("assets");
                 for (int j = 0; j < assets.length(); j++) {
                     JSONObject fileStats = assets.getJSONObject(j);
-                    //System.out.println("-------------------------------------------------------------");
-                    //System.out.println("Download URL: " + fileStats.getString("browser_download_url"));
-                    //System.out.println("Downloads: " + fileStats.getInt("download_count"));
-                    //System.out.println("Updated: " + fileStats.getString("updated_at"));
-                    //System.out.println("File Size: " + fileStats.getInt("size"));
-                    //System.out.println();
-                    files.add(fileStats.getString("browser_download_url"));
+
+                    JSONObject reducedAsset = new JSONObject();
+                    reducedAsset.put("name",fileStats.getString("name"));
+                    reducedAsset.put("browser_download_url",fileStats.getString("browser_download_url"));
+                    reducedAsset.put("download_count",fileStats.getInt("download_count"));
+                    reducedAsset.put("updated_at",fileStats.getString("updated_at"));
+                    reducedAsset.put("created_at",fileStats.getString("created_at"));
+                    reducedAsset.put("size",fileStats.getInt("size"));
+                    fileData.add(reducedAsset);
                 }
             }
         }
-        return files;
+        return fileData;
     }
 
     private static String getNextPageUrl(HttpURLConnection connection) {
@@ -117,6 +107,22 @@ public class GitHubReleasesFetcher {
             }
         }
         return null;
+    }
+
+    public static String fetchReadmeContent(String owner, String repo) throws Exception {
+        String url = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/main/README.md";
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setRequestMethod("GET");
+        connection.addRequestProperty("Accept", "application/vnd.github.v3+json");
+
+        connection.setRequestProperty("Authorization", authHeaderValue);
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == 200) {
+            return new String(connection.getInputStream().readAllBytes());
+        } else {
+            return "# No README.md found in " + repo + " by " + owner + ".";
+        }
     }
 }
 

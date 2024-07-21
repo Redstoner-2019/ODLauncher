@@ -1,12 +1,5 @@
-import me.redstoner2019.Utilities;
 import me.redstoner2019.client.downloading.FileDownloader;
-import me.redstoner2019.client.github.GitHubReleasesFetcher;
 import me.redstoner2019.server.CacheServer;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.IOException;
-import java.util.List;
 
 public class Test {
     public static void main(String[] args) throws Exception {

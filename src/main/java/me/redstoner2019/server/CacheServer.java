@@ -1,9 +1,8 @@
 package me.redstoner2019.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import me.redstoner2019.StatisticClient;
-import me.redstoner2019.client.github.GitHubReleasesFetcher;
-import org.json.JSONArray;
+import me.redstoner2019.Util;
+import me.redstoner2019.client.github.GitHub;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -16,7 +15,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.List;
 
-import static me.redstoner2019.client.github.GitHubReleasesFetcher.authHeaderValue;
+import static me.redstoner2019.client.github.GitHub.authHeaderValue;
 
 public class CacheServer {
     public static void main(String[] args) throws IOException {
@@ -33,9 +32,17 @@ public class CacheServer {
             @Override
             public void run() {
                 while (true) {
+                    long updateStart = System.currentTimeMillis();
+                    System.out.println();
+                    System.out.println("Pre Refresh");
+                    Util.memoryInfoDump();
                     refresh();
+                    System.gc();
+                    System.out.println();
+                    System.out.println("Post Refresh");
+                    Util.memoryInfoDump();
                     try {
-                        Thread.sleep(600000);
+                        Thread.sleep((60000) - (System.currentTimeMillis() - updateStart));
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -44,16 +51,24 @@ public class CacheServer {
         });
         updater.start();
 
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    System.out.println(Thread.getAllStackTraces().keySet().size() + " threads running");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
+        thread.start();
+
         ServerSocket serverSocket = new ServerSocket(8001);
         while (serverSocket.isBound()) {
-            Thread t = new Thread(() -> {
-                try {
-                    new ClientHandler(serverSocket.accept());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            t.start();
+            new ClientHandler(serverSocket.accept());
         }
     }
 
@@ -66,28 +81,51 @@ public class CacheServer {
             System.out.println(new String(connection.getInputStream().readAllBytes()));
 
             JSONObject cache = loadCache();
-            for(String user : cache.getJSONObject("repos").keySet()){
-                JSONObject repos = cache.getJSONObject("repos").getJSONObject(user);
+            for(String author : cache.getJSONObject("repos").keySet()){
+                JSONObject repos = cache.getJSONObject("repos").getJSONObject(author);
                 for(String repo : repos.keySet()){
-                    JSONObject versions = repos.getJSONObject(repo);
+                    JSONObject repository = repos.getJSONObject(repo);
+                    List<String> versionsAvailable = GitHub.fetchAllReleases(author,repo);
 
+                    //Check if any version is missing
+
+                    for(String v : versionsAvailable){
+                        if(!repository.has(v)){
+                            addVersion(author,repo,v);
+                        }
+                    }
+
+                    for(String v : versionsAvailable){
+                        List<JSONObject> assets = GitHub.fetchAllReleaseFiles(author,repo,v);
+
+                        for(JSONObject asset : assets){
+                            addAsset(author,repo,v,asset);
+                        }
+                    }
+
+                    cache = loadCache();
+                    repos = cache.getJSONObject("repos").getJSONObject(author);
+
+                    /*JSONObject versions = repos.getJSONObject(repo);
                     List<String> versionsRequested = GitHubReleasesFetcher.fetchAllReleases(user,repo);
-
-                    for(String v : versionsRequested){
-                        if(!versions.has(v)){
-                            System.out.println("Found new Version for repo " + repo + ", " + user + ": " + v);
-                            addVersion(user,repo,v);
+                    for(String version : versionsRequested){
+                        if(!versions.has(version)){
+                            addVersion(user,repo,version);
+                            versions = repos.getJSONObject(repo);
+                            System.out.println(versions);
+                            List<JSONObject> assets = GitHubReleasesFetcher.fetchAllReleaseFiles(user,repo,version);
+                            for(JSONObject asset : assets){
+                                String assetName = asset.getString("name");
+                                JSONObject versionObject = versions.getJSONObject(version);
+                                if(!versionObject.has(assetName)){
+                                    System.out.println("New Asset for " +version + " " + assetName);
+                                    addAsset(user,repo,version,asset);
+                                }
+                                System.out.println(asset);
+                            }
                         }
                     }
-
-                    for(String v : versionsRequested){
-                        List<String> assets = GitHubReleasesFetcher.fetchAllReleaseFiles(user,repo,v);
-                        for(String a : assets){
-                            JSONObject o = new JSONObject();
-                            o.put("filename",a);
-                            addAsset(user,repo, v, o);
-                        }
-                    }
+*/
                 }
                 connection = (HttpURLConnection) new URL("https://api.github.com/rate_limit").openConnection();
                 connection.addRequestProperty("Accept", "application/vnd.github.v3+json");
@@ -105,71 +143,78 @@ public class CacheServer {
         File data = new File("cacheServer/index.json");
         return new JSONObject(readFile(data));
     }
-    public static void save(JSONObject object) throws IOException {
+    public static void save(JSONObject object) throws IOException, InterruptedException {
         File data = new File("cacheServer/index.json");
         writeStringToFile(object,data);
     }
 
-    public static void addUser(String user) throws IOException {
+    public static void addUser(String user) throws IOException, InterruptedException {
         JSONObject cacheData = loadCache();
         JSONObject repos = cacheData.getJSONObject("repos");
         repos.put(user,new JSONObject());
         cacheData.put("repos",repos);
         save(cacheData);
     }
-    public static void addRepo(String user, String repo) throws IOException {
+    public static void addRepo(String user, String repo) throws IOException, InterruptedException {
         JSONObject cacheData = loadCache();
         JSONObject repos = cacheData.getJSONObject("repos");
         if(!repos.has(user)){
             addUser(user);
             cacheData = loadCache();
         }
+        repos = cacheData.getJSONObject("repos");
         JSONObject repositories = repos.getJSONObject(user);
-        repositories.put(repo, new JSONArray());
+        repositories.put(repo, new JSONObject());
         repos.put(user, repositories);
         cacheData.put("repos",repos);
         save(cacheData);
     }
-    public static void addVersion(String user, String repo,String version) throws IOException {
+    public static void addVersion(String user, String repo,String version) throws IOException, InterruptedException {
         JSONObject cacheData = loadCache();
         JSONObject repos = cacheData.getJSONObject("repos");
         if(!repos.has(user)){
             addUser(user);
             cacheData = loadCache();
         }
+        repos = cacheData.getJSONObject("repos");
         JSONObject repositories = repos.getJSONObject(user);
         if(!repositories.has(repo)){
             addRepo(user,repo);
             cacheData = loadCache();
         }
+        repositories = repos.getJSONObject(user);
         JSONObject versions = repositories.getJSONObject(repo);
-        versions.put(version,new JSONArray());
+        versions.put(version,new JSONObject());
         repositories.put(repo, versions);
         repos.put(user, repositories);
         cacheData.put("repos",repos);
         save(cacheData);
     }
-    public static void addAsset(String user, String repo,String version, JSONObject asset) throws IOException {
+    public static void addAsset(String user, String repo,String version, JSONObject asset) throws IOException, InterruptedException {
         JSONObject cacheData = loadCache();
         JSONObject repos = cacheData.getJSONObject("repos");
         if(!repos.has(user)){
             addUser(user);
             cacheData = loadCache();
         }
+        repos = cacheData.getJSONObject("repos");
         JSONObject repositories = repos.getJSONObject(user);
         if(!repositories.has(repo)){
             addRepo(user,repo);
             cacheData = loadCache();
         }
+        repositories = repos.getJSONObject(user);
         JSONObject versions = repositories.getJSONObject(repo);
         if(!versions.has(version)){
             addVersion(user, repo, version);
             cacheData = loadCache();
         }
+        versions = repositories.getJSONObject(repo);
 
-        JSONArray assets = versions.getJSONArray(version);
-        assets.put(asset);
+        JSONObject assets = versions.getJSONObject(version);
+        assets.put(asset.getString("name"),asset);
         versions.put(version,assets);
+
         repositories.put(repo, versions);
         repos.put(user, repositories);
         cacheData.put("repos",repos);

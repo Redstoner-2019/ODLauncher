@@ -91,6 +91,8 @@ public class ClientHandler {
                         }
                         System.out.println("Disconnected");
                         break;
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
