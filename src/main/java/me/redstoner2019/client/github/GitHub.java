@@ -12,7 +12,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class GitHub {
-    private static final String TOKEN = "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";
+    private static final String TOKEN = "";
     private static final String GITHUB_API_URL_TEMPLATE = "https://api.github.com/repos/%s/%s/releases";
     public static String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(("Redstoner-2019:" + TOKEN).getBytes());
 
