@@ -44,7 +44,6 @@ public class FileDownloader {
     }
 
     public static void downloadFile(String fileUrl, String destinationFilePath, DownloadStatus status) {
-        System.out.println("Init download of " + fileUrl + " to " + destinationFilePath);
         File file = new File(destinationFilePath);
         if(!file.exists()) {
             file.getParentFile().mkdirs();
@@ -58,10 +57,6 @@ public class FileDownloader {
             @Override
             public void run() {
                 try{
-                    long l = System.currentTimeMillis();
-
-                    System.out.println("Starting download of " + fileUrl);
-
                     URL url = new URL(fileUrl);
                     URLConnection urlConnection = url.openConnection();
                     HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
@@ -72,11 +67,6 @@ public class FileDownloader {
 
                     status.setStatus(response);
                     status.setBytesTotal(urlConnection.getHeaderFieldLong("Content-Length",1));
-                    System.out.println(urlConnection.getHeaderFieldLong("Content-Length",1));
-
-                    for(String s : urlConnection.getHeaderFields().keySet()){
-                        System.out.println(String.format(" - %-50s   |   %-50s", s, urlConnection.getHeaderField(s)));
-                    }
 
                     FileOutputStream outputStream = new FileOutputStream(destinationFilePath);
 
@@ -103,7 +93,7 @@ public class FileDownloader {
                         System.err.println("File: " + fileUrl);
                     }
 
-                    System.out.println("Took " + (System.currentTimeMillis() - l) + " ms");
+                    Thread.sleep(100);
                     status.setComplete(true);
                 }catch (Exception e){
                     e.printStackTrace();

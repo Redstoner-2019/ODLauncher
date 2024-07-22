@@ -4,6 +4,7 @@ import me.redstoner2019.*;
 import me.redstoner2019.ODLayout;
 import me.redstoner2019.client.AuthenticatorClient;
 import me.redstoner2019.client.downloading.DownloadStatus;
+import me.redstoner2019.client.downloading.FileDownloader;
 import me.redstoner2019.client.github.CacheRequest;
 import me.redstoner2019.client.github.GitHub;
 import me.redstoner2019.server.CacheServer;
@@ -25,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 public class Main extends JFrame {
@@ -48,7 +50,7 @@ public class Main extends JFrame {
 
         JSONObject config = new JSONObject(CacheServer.readFile(configSaveFile));
 
-        TOKEN = config.getString("token");
+        if(config.has("token")) TOKEN = config.getString("token");
 
         try {
             authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
@@ -74,6 +76,7 @@ public class Main extends JFrame {
 
         DefaultListModel<Profile> profilesModel = new DefaultListModel<>();
         JList<Profile> profiles = new JList<>(profilesModel);
+        JList<Profile> profileJList = new JList<>(profilesModel);
         profiles.setCellRenderer(new ProfileRenderer());
         JScrollPane scrollPane = new JScrollPane(profiles);
         JLabel info = new JLabel();
@@ -81,7 +84,14 @@ public class Main extends JFrame {
         JProgressBar progress = new JProgressBar();
         JButton launch = new JButton("Launch");
 
-        try {
+        if(config.has("profiles")){
+            JSONObject o = config.getJSONObject("profiles");
+            for(String uuid : o.keySet()){
+                profilesModel.add(0,new Profile().fromJSON(o.getJSONObject(uuid)));
+            }
+        }
+
+        /*try {
             profilesModel.add(0,new Profile(ImageIO.read(new File("C:\\Users\\Redstoner_2019\\Pictures\\Screenshot 2024-06-16 183803.png")),"This is a really really really really really really really really really really long Game Name","v1.3.0-alpha.1","Profile 1"));
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -95,7 +105,7 @@ public class Main extends JFrame {
             profilesModel.add(0,new Profile(ImageIO.read(new File("C:\\Users\\Redstoner_2019\\Pictures\\Screenshot 2024-06-16 183803.png")),"FNaF","v1.3.0-alpha.1", "Profile 2"));
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
+        }*/
 
         profiles.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -223,6 +233,12 @@ public class Main extends JFrame {
         }
 
         DefaultListModel<String> gamesModel = new DefaultListModel<>();
+        DefaultListModel<String> versionsModel = new DefaultListModel<>();
+        DefaultListModel<String> filesModel = new DefaultListModel<>();
+
+        JList<String> games = new JList<>(gamesModel);
+        JList<String> versions = new JList<>(versionsModel);
+        JList<String> files = new JList<>(filesModel);
 
         {
             JPanel panel = new JPanel();
@@ -230,7 +246,9 @@ public class Main extends JFrame {
             ODLayout layout = new ODLayout();
 
             layout.addColumn(new Column(10,LengthType.PIXEL));
-            layout.addColumn(new Column(200,LengthType.PIXEL));
+            layout.addColumn(new Column(95,LengthType.PIXEL));
+            layout.addColumn(new Column(10,LengthType.PIXEL));
+            layout.addColumn(new Column(95,LengthType.PIXEL));
             layout.addColumn(new Column(10,LengthType.PIXEL));
             layout.addColumn(new Column(Lengths.VARIABLE));
             layout.addColumn(new Column(10,LengthType.PIXEL));
@@ -243,9 +261,9 @@ public class Main extends JFrame {
             layout.addRow(new Row(10,LengthType.PIXEL));
 
             JLabel selectProfile = new JLabel("<html><u>Select Profile</u></html>");
-            JList<Profile> profileJList = new JList<>(profilesModel);
             JScrollPane profileScrollPane = new JScrollPane(profileJList);
-            JButton createNewProfile = new JButton("Create New Profile");
+            JButton createNewProfile = new JButton("Create");
+            JButton deleteProfile = new JButton("Delete");
             JPanel editPanel = new JPanel();
 
             profileJList.setCellRenderer(new ProfileRenderer());
@@ -259,29 +277,42 @@ public class Main extends JFrame {
 
                 editLayout.addRow(new Row(30,LengthType.PIXEL));
                 editLayout.addRow(new Row(10,LengthType.PIXEL));
-                editLayout.addRow(new Row(30,LengthType.PIXEL));
+                editLayout.addRow(new Row(Lengths.VARIABLE));
+                editLayout.addRow(new Row(10,LengthType.PIXEL));
+                editLayout.addRow(new Row(200,LengthType.PIXEL));
                 editLayout.addRow(new Row(10,LengthType.PIXEL));
                 editLayout.addRow(new Row(30,LengthType.PIXEL));
                 editLayout.addRow(new Row(10,LengthType.PIXEL));
-                editLayout.addRow(new Row(30,LengthType.PIXEL));
-                editLayout.addRow(new Row(10,LengthType.PIXEL));
-                editLayout.addRow(new Row(30,LengthType.PIXEL));
 
                 editLayout.addColumn(new Column(10,LengthType.PIXEL));
-                editLayout.addColumn(new Column(200,LengthType.PIXEL));
+                editLayout.addColumn(new Column(Lengths.VARIABLE));
+                editLayout.addColumn(new Column(10,LengthType.PIXEL));
+                editLayout.addColumn(new Column(Lengths.VARIABLE));
                 editLayout.addColumn(new Column(10,LengthType.PIXEL));
                 editLayout.addColumn(new Column(Lengths.VARIABLE));
                 editLayout.addColumn(new Column(10,LengthType.PIXEL));
 
-                JLabel gamesLabel = new JLabel("Select game: ");
-                JList<String> games = new JList<>(gamesModel);
+                JLabel gamesLabel = new JLabel("Game: ");
+                JLabel versionsLabel = new JLabel("Version: ");
+                JLabel filesLabel = new JLabel("File: ");
+
                 JScrollPane gamesScroll = new JScrollPane(games);
+                JScrollPane versionsScroll = new JScrollPane(versions);
+                JScrollPane filesScroll = new JScrollPane(files);
 
                 editPanel.add(gamesScroll);
                 editPanel.add(gamesLabel);
+                editPanel.add(versionsScroll);
+                editPanel.add(versionsLabel);
+                editPanel.add(filesScroll);
+                editPanel.add(filesLabel);
 
                 editLayout.registerComponent(gamesLabel,new Position(1,0));
-                editLayout.registerComponent(gamesScroll,new Position(3,0));
+                editLayout.registerComponent(gamesScroll,new Position(1,2));
+                editLayout.registerComponent(versionsLabel,new Position(3,0));
+                editLayout.registerComponent(versionsScroll,new Position(3,2));
+                editLayout.registerComponent(filesLabel,new Position(5,0));
+                editLayout.registerComponent(filesScroll,new Position(5,2));
 
                 editPanel.setLayout(editLayout);
             }
@@ -289,19 +320,28 @@ public class Main extends JFrame {
             panel.add(selectProfile);
             panel.add(profileScrollPane);
             panel.add(createNewProfile);
+            panel.add(deleteProfile);
             panel.add(editPanel);
 
-            layout.registerComponent(selectProfile,new Position(1,1));
-            layout.registerComponent(profileScrollPane,new Position(1,3));
+            layout.registerComponent(selectProfile,new Position(1,1),new Position(3,1));
+            layout.registerComponent(profileScrollPane,new Position(1,3),new Position(3,3));
             layout.registerComponent(createNewProfile,new Position(1,5));
-            layout.registerComponent(editPanel,new Position(3,3),new Position(3,5));
+            layout.registerComponent(deleteProfile,new Position(3,5));
+            layout.registerComponent(editPanel,new Position(5,3),new Position(5,5));
 
             createNewProfile.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     System.out.println("Create Profile");
-                    profilesModel.add(0,new Profile(null,"","","New Profile"));
+                    profilesModel.add(0,new Profile(null,"FNaF","v1.3.0-alpha.1","New Profile"));
                     System.out.println("Created Profile");
+                }
+            });
+
+            deleteProfile.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    profilesModel.removeElementAt(profiles.getSelectedIndex());
                 }
             });
 
@@ -550,11 +590,34 @@ public class Main extends JFrame {
 
         setVisible(true);
 
-        tabbedPane.addChangeListener(new ChangeListener() {
+        profileJList.addListSelectionListener(new ListSelectionListener() {
             @Override
-            public void stateChanged(ChangeEvent e) {
+            public void valueChanged(ListSelectionEvent e) {
+                System.out.println("Event");
                 gamesModel.removeAllElements();
                 gamesModel.addAll(CacheRequest.getGames());
+                if(gamesModel.contains(profileJList.getSelectedValue().getGame())) games.setSelectedValue(profileJList.getSelectedValue().getGame(),false);
+                else games.setSelectedIndex(0);
+            }
+        });
+
+        games.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                versionsModel.removeAllElements();
+                versionsModel.addAll(CacheRequest.getVersions(games.getSelectedValue()));
+                if(versionsModel.contains(profileJList.getSelectedValue().getVersion())) versions.setSelectedValue(profileJList.getSelectedValue().getVersion(),false);
+                else versions.setSelectedIndex(0);
+            }
+        });
+
+        versions.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                filesModel.removeAllElements();
+                filesModel.addAll(CacheRequest.getFiles(games.getSelectedValue(),versions.getSelectedValue()));
+                if(filesModel.contains(profileJList.getSelectedValue().getFile())) files.setSelectedValue(profileJList.getSelectedValue().getFile(),false);
+                else files.setSelectedIndex(0);
             }
         });
 
@@ -687,6 +750,38 @@ public class Main extends JFrame {
                         createButton.setEnabled(true);
                     }
                     try {
+                        if(profiles.getSelectedIndex() != -1){
+                            info.setText(Util.convertMarkdownToHtml(GitHub.fetchReadmeContent(profiles.getSelectedValue().getAuthor(),profiles.getSelectedValue().getGame())));
+                        } else {
+                            info.setText(Util.convertMarkdownToHtml("# No Profile Selected"));
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    JSONObject profilesObject = new JSONObject();
+
+                    Enumeration<Profile> profileEnumeration = profilesModel.elements();
+
+                    while (profileEnumeration.hasMoreElements()) {
+                        Profile p = profileEnumeration.nextElement();
+
+                        if(games.getSelectedIndex() != -1) p.setGame(games.getSelectedValue());
+                        if(versions.getSelectedIndex() != -1) p.setVersion(versions.getSelectedValue());
+                        if(files.getSelectedIndex() != -1) p.setFile(files.getSelectedValue());
+
+                        profilesObject.put(p.getUuid(),p.asJSON());
+                    }
+
+                    config.put("profiles",profilesObject);
+
+                    try {
+                        CacheServer.writeStringToFile(config,configSaveFile);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    try {
                         Thread.sleep(50);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
@@ -696,13 +791,49 @@ public class Main extends JFrame {
         });
         updater.start();
 
-        try {
-            info.setText(Util.convertMarkdownToHtml(GitHub.fetchReadmeContent("Redstoner-2019","RedEngine")));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        launch.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Thread t = new Thread(() -> {
+                    try{
+                        launch.setEnabled(false);
 
+                        Profile p = profiles.getSelectedValue();
+                        if(p == null){
+                            JOptionPane.showMessageDialog(main,"Please select a Profile first.");
+                            launch.setEnabled(true);
+                            return;
+                        }
 
+                        String destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "/" + p.getFile();
+
+                        File saveLocaton = new File(destination);
+
+                        if(!saveLocaton.exists()) {
+                            FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
+                            while (!status.isComplete()) {
+                                progress.setMaximum((int) status.getBytesTotal());
+                                progress.setValue((int) status.getBytesRead());
+                                progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + ")");
+                            }
+                        } else {
+                            status.setComplete(true);
+                        }
+                        try {
+                            Process pr = Runtime.getRuntime().exec("java -jar " + destination + " " + TOKEN);
+                        } catch (IOException ex) {
+                            launch.setEnabled(true);
+                            throw new RuntimeException(ex);
+                        }
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        launch.setEnabled(true);
+                    }
+                });
+                t.start();
+            }
+        });
 
         /*launch.addActionListener(new ActionListener() {
             @Override
@@ -958,7 +1089,12 @@ public class Main extends JFrame {
 
             FontMetrics fm = panel.getFontMetrics(panel.getFont());
 
-            panel.setPreferredSize(new Dimension(Math.max(fm.stringWidth(profile.getGame()),fm.stringWidth(profile.getVersion())) + 100,60));
+            try{
+                panel.setPreferredSize(new Dimension(Math.max(fm.stringWidth(profile.getGame()),fm.stringWidth(profile.getVersion())) + 100,60));
+            } catch (Exception e){
+                panel.setPreferredSize(new Dimension(200,60));
+                e.printStackTrace();
+            }
 
             ODLayout layout = new ODLayout();
 
