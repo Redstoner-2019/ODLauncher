@@ -31,6 +31,10 @@ public class GitHub {
                 System.err.println("[403], API limit exceeded");
                 return new ArrayList<>();
             }
+            if(connection.getResponseCode() == 401){
+                System.err.println("[401], Unauthorized");
+                return new ArrayList<>();
+            }
 
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             String inputLine;

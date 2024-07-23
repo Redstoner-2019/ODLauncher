@@ -43,6 +43,22 @@ public class FileDownloader {
         return new JSONObject();
     }
 
+    public static String getFileInfoNew(String owner, String repo, String version, String filename) throws Exception {
+        System.out.println(String.format("https://github.com/%s/%s/releases/tag/%s", owner, repo,version));
+        URL url = new URL(String.format("https://github.com/%s/%s/releases/tag/%s", owner, repo,version));
+
+        String dataString = new String(url.openConnection().getInputStream().readAllBytes());
+
+        File file = new File("doc.html");
+        if(!file.exists()){
+            file.createNewFile();
+        }
+
+        new FileOutputStream(file).write(dataString.getBytes());
+
+        return dataString;
+    }
+
     public static void downloadFile(String fileUrl, String destinationFilePath, DownloadStatus status) {
         File file = new File(destinationFilePath);
         if(!file.exists()) {
@@ -73,7 +89,9 @@ public class FileDownloader {
                     if (response == 200) {
                         InputStream data = urlConnection.getInputStream();
 
-                        int packetSize = 256000;
+                        int packetSize = 1024*128;
+
+                        System.out.println("Packet: " + packetSize);
 
                         byte[] dataRead = data.readNBytes(packetSize);
 

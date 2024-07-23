@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage;
 import java.util.UUID;
 
 public class Profile {
-    private BufferedImage image;
+    private String icon;
     private String game;
     private String version;
     private String name;
@@ -42,20 +42,20 @@ public class Profile {
         this.name = name;
     }
 
-    public Profile(BufferedImage image, String game, String version, String name) {
-        this.image = image;
+    public Profile(String image, String game, String version, String name) {
+        this.icon = image;
         this.game = game;
         this.version = version;
         this.name = name;
         uuid = UUID.randomUUID().toString();
     }
 
-    public BufferedImage getImage() {
-        return image;
+    public String getIcon() {
+        return icon;
     }
 
-    public void setImage(BufferedImage image) {
-        this.image = image;
+    public void setIcon(String image) {
+        this.icon = image;
     }
 
     public String getGame() {
@@ -90,6 +90,7 @@ public class Profile {
         o.put("author",author);
         o.put("file",file);
         o.put("uuid",uuid);
+        o.put("icon",icon);
         return o;
     }
     public Profile fromJSON(JSONObject o){
@@ -99,6 +100,7 @@ public class Profile {
         if(o.has("author")) author = o.getString("author"); else author = "";
         if(o.has("file")) file = o.getString("file"); else file = "";
         if(o.has("uuid")) uuid = o.getString("uuid");
+        if(o.has("icon")) icon = o.getString("icon");
         else uuid = UUID.randomUUID().toString();
         return this;
     }

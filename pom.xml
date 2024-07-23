@@ -23,12 +23,36 @@
     </distributionManagement>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.vladsch.flexmark/flexmark-all -->
         <dependency>
             <groupId>com.vladsch.flexmark</groupId>
             <artifactId>flexmark-all</artifactId>
-            <version>0.62.2</version>
+            <version>0.64.8</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.5</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.json/json -->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+
+        <dependency>
+            <groupId>me.redstoner2019</groupId>
+            <artifactId>odlayout</artifactId>
+            <version>1.1.0</version>
+        </dependency>
         <dependency>
             <groupId>me.redstoner2019</groupId>
             <artifactId>authenticationserver</artifactId>
@@ -38,11 +62,6 @@
             <groupId>statisticsserver</groupId>
             <artifactId>me.redstoner2019</artifactId>
             <version>1.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>me.redstoner2019</groupId>
-            <artifactId>odlayout</artifactId>
-            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>utilities</groupId>
