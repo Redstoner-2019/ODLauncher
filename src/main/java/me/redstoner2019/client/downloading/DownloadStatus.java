@@ -41,4 +41,11 @@ public class DownloadStatus {
     public void setComplete(boolean complete) {
         this.complete = complete;
     }
+
+    public void reset(){
+        setBytesTotal(0);
+        setBytesRead(0);
+        setStatus(200);
+        setComplete(false);
+    }
 }

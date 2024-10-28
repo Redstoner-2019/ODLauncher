@@ -1,5 +1,6 @@
 package me.redstoner2019.client.gui;
 
+import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.IntelliJTheme;
 import me.redstoner2019.*;
 import me.redstoner2019.ODLayout;
@@ -13,6 +14,8 @@ import org.json.JSONObject;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
@@ -21,13 +24,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.UUID;
 
 public class Main extends JFrame {
@@ -49,6 +50,7 @@ public class Main extends JFrame {
     private JScrollPane versionInfo = new JScrollPane(info);
     private JProgressBar progress = new JProgressBar();
     private JButton launch = new JButton("Launch");
+    private JButton downloadFile = new JButton("Download");
     private JTextField profileName = new JTextField();
     private DefaultListModel<String> gamesModel = new DefaultListModel<>();
     private DefaultListModel<String> versionsModel = new DefaultListModel<>();
@@ -63,6 +65,8 @@ public class Main extends JFrame {
     public Main() throws IOException {
         main = this;
 
+        SwingUtilities.updateComponentTreeUI(this);
+
         configSaveFile = new File("odlauncher/config.json");
 
         config = new JSONObject(CacheServer.readFile(configSaveFile));
@@ -76,6 +80,8 @@ public class Main extends JFrame {
             JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
         }
         authenticatorClient.setup();
+
+        System.out.println("Connecting to " + authenticatorClient.getAddress() + ":" + authenticatorClient.getPort());
 
         setSize(1280,720);
         setResizable(true);
@@ -115,8 +121,8 @@ public class Main extends JFrame {
 
         JTextField usernameCreation = new JTextField();
         JTextField displayNameCreation = new JTextField();
+        JTextField email = new JTextField();
         JPasswordField passwordCreation = new JPasswordField();
-        JPasswordField passwordCreationConfirm = new JPasswordField();
 
         JButton loginButton = new JButton("Login");
         JButton logoutButton = new JButton("Logout");
@@ -197,6 +203,8 @@ public class Main extends JFrame {
             bottomLayout.addColumn(new Column(10,LengthType.PIXEL));
             bottomLayout.addColumn(new Column(Lengths.VARIABLE));
             bottomLayout.addColumn(new Column(10,LengthType.PIXEL));
+            bottomLayout.addColumn(new Column(200,LengthType.PIXEL));
+            bottomLayout.addColumn(new Column(10,LengthType.PIXEL));
             bottomLayout.addRow(new Row(10,LengthType.PIXEL));
             bottomLayout.addRow(new Row(Lengths.VARIABLE));
             bottomLayout.addRow(new Row(10,LengthType.PIXEL));
@@ -204,10 +212,12 @@ public class Main extends JFrame {
             bottomLayout.addRow(new Row(10,LengthType.PIXEL));
 
             bottomPanel.add(launch);
+            bottomPanel.add(downloadFile);
             bottomPanel.add(progress);
 
             bottomLayout.registerComponent(launch,new Position(1,1));
-            bottomLayout.registerComponent(progress,new Position(1,3));
+            bottomLayout.registerComponent(downloadFile,new Position(3,1));
+            bottomLayout.registerComponent(progress,new Position(1,3),new Position(3,3));
 
             bottomPanel.setLayout(bottomLayout);
             panel.add(bottomPanel);
@@ -559,7 +569,7 @@ public class Main extends JFrame {
                 panel.add(usernameCreation);
                 panel.add(displayNameCreation);
                 panel.add(passwordCreation);
-                panel.add(passwordCreationConfirm);
+                panel.add(email);
 
                 panel.add(usernameCreateLabel);
                 panel.add(displaynameCreateLabel);
@@ -573,8 +583,8 @@ public class Main extends JFrame {
 
                 layout.registerComponent(usernameCreation,new Position(3,1));
                 layout.registerComponent(displayNameCreation,new Position(3,3));
-                layout.registerComponent(passwordCreation,new Position(3,5));
-                layout.registerComponent(passwordCreationConfirm,new Position(3,7));
+                layout.registerComponent(email,new Position(3,5));
+                layout.registerComponent(passwordCreation,new Position(3,7));
 
                 layout.registerComponent(usernameCreateLabel,new Position(1,1));
                 layout.registerComponent(displaynameCreateLabel,new Position(1,3));
@@ -636,9 +646,162 @@ public class Main extends JFrame {
             tabbedPane.addTab("Settings", settingsTab);
         }
 
+        {
+            JTabbedPane developerPanel = new JTabbedPane();
+
+            {
+                JPanel panel = new JPanel();
+
+                JTextField txtGameName = new JTextField();
+                JTextField txtGameID = new JTextField();
+                JFormattedTextField fmtDescription = new JFormattedTextField();
+
+                JLabel lblGameName = new JLabel("Game Name:");
+                JLabel lblGameID = new JLabel("Game ID:");
+                JLabel lblDescription = new JLabel("Game Description:");
+
+                JButton btnCreate = new JButton("Create");
+
+                panel.add(txtGameName);
+                panel.add(txtGameID);
+                panel.add(fmtDescription);
+
+                panel.add(lblGameName);
+                panel.add(lblGameID);
+                panel.add(lblDescription);
+
+                panel.add(btnCreate);
+
+                ODLayout layout = new ODLayout();
+
+                layout.addColumn(new Column(10,LengthType.PIXEL));
+                layout.addColumn(new Column(100,LengthType.PIXEL));
+                layout.addColumn(new Column(10,LengthType.PIXEL));
+                layout.addColumn(new Column(Lengths.VARIABLE));
+                layout.addColumn(new Column(10,LengthType.PIXEL));
+
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(Lengths.VARIABLE));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+
+                layout.registerComponent(lblGameName,new Position(1,1));
+                layout.registerComponent(txtGameName,new Position(3,1));
+                layout.registerComponent(lblGameID,new Position(1,3));
+                layout.registerComponent(txtGameID,new Position(3,3));
+                layout.registerComponent(lblDescription,new Position(1,5),new Position(3,5));
+                layout.registerComponent(fmtDescription,new Position(1,7),new Position(3,7));
+                layout.registerComponent(btnCreate,new Position(1,9));
+
+                panel.setLayout(layout);
+
+                developerPanel.addTab("Create Game", panel);
+
+                btnCreate.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        System.out.println("Create Game");
+                    }
+                });
+            }
+
+            {
+                JPanel panel = new JPanel();
+
+                ODLayout layout = new ODLayout();
+
+                JLabel lblGameID = new JLabel("Game ID:");
+                JTextField txtGameID = new JTextField();
+                JSeparator sepGameID = new JSeparator();
+                JLabel lblGameName = new JLabel("Game Name:");
+                JTextField txtGameName = new JTextField();
+                JSeparator sepGameName = new JSeparator();
+                JButton btnUpdateGameName = new JButton("Update Game Name");
+
+                panel.add(lblGameID);
+                panel.add(txtGameID);
+                panel.add(sepGameID);
+                panel.add(lblGameName);
+                panel.add(txtGameName);
+                panel.add(btnUpdateGameName);
+                panel.add(sepGameName);
+
+                layout.addColumn(new Column(10,LengthType.PIXEL));
+                layout.addColumn(new Column(100,LengthType.PIXEL));
+                layout.addColumn(new Column(10,LengthType.PIXEL));
+                layout.addColumn(new Column(Lengths.VARIABLE));
+                layout.addColumn(new Column(10,LengthType.PIXEL));
+
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+                layout.addRow(new Row(30,LengthType.PIXEL));
+                layout.addRow(new Row(10,LengthType.PIXEL));
+
+                layout.registerComponent(lblGameID,new Position(1,1));
+                layout.registerComponent(txtGameID,new Position(3,1));
+                layout.registerComponent(sepGameID,new Position(0,3),new Position(4,3));
+                layout.registerComponent(lblGameName,new Position(1,5));
+                layout.registerComponent(txtGameName,new Position(3,5));
+                layout.registerComponent(btnUpdateGameName,new Position(1,7));
+                layout.registerComponent(sepGameName,new Position(0,9),new Position(4,9));
+
+                panel.setLayout(layout);
+
+                developerPanel.addTab("Manage Game", panel);
+            }
+
+            {
+                JPanel panel = new JPanel();
+
+                ODLayout layout = new ODLayout();
+
+                panel.setLayout(layout);
+
+                developerPanel.addTab("Upload new Version", panel);
+            }
+
+            {
+                JPanel panel = new JPanel();
+
+                ODLayout layout = new ODLayout();
+
+                panel.setLayout(layout);
+
+                developerPanel.addTab("Manage Game Challenges", panel);
+            }
+
+            tabbedPane.addTab("Developer Settings", developerPanel);
+        }
+
         setContentPane(tabbedPane);
 
         setVisible(true);
+
+        tabbedPane.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                if(tabbedPane.getSelectedIndex() == 5 && !isLoggedIn){
+                    tabbedPane.setSelectedIndex(2);
+                    JOptionPane.showMessageDialog(null, "You are not logged in!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
 
         profileJList.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -785,6 +948,7 @@ public class Main extends JFrame {
                     try {
                         authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
                         authenticatorClient.setAddress(Utilities.getIPData().getString("auth-server"));
+                        System.out.println("Connecting to " + authenticatorClient.getAddress() + " " + authenticatorClient.getPort());
                     } catch (IOException ex) {
                         JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
                     }
@@ -795,7 +959,10 @@ public class Main extends JFrame {
                     }
                 }
 
-                JSONObject result = authenticatorClient.createAccount(usernameCreation.getText(), displayNameCreation.getText(),new String(passwordCreation.getPassword()));
+                System.out.println("Connection");
+
+                JSONObject result = authenticatorClient.createAccount(usernameCreation.getText(), displayNameCreation.getText(),new String(passwordCreation.getPassword()),email.getText());
+                System.out.println(result);
 
                 switch (result.getString("data")) {
                     case "account-created" -> {
@@ -841,7 +1008,7 @@ public class Main extends JFrame {
                         usernameCreation.setEnabled(false);
                         displayNameCreation.setEnabled(false);
                         passwordCreation.setEnabled(false);
-                        passwordCreationConfirm.setEnabled(false);
+                        email.setEnabled(false);
                         createButton.setEnabled(false);
                     } else {
                         loginButton.setEnabled(true);
@@ -853,29 +1020,77 @@ public class Main extends JFrame {
                         usernameCreation.setEnabled(true);
                         displayNameCreation.setEnabled(true);
                         passwordCreation.setEnabled(true);
-                        passwordCreationConfirm.setEnabled(true);
+                        email.setEnabled(true);
                         createButton.setEnabled(true);
+                    }
+                    try {
+                        Thread.sleep(0);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
         });
         updater.start();
 
-        launch.addActionListener(new ActionListener() {
+        downloadFile.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Thread t = new Thread(() -> {
-                    try{
+                Thread t = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        downloadFile.setEnabled(false);
                         launch.setEnabled(false);
 
                         Profile p = profiles.getSelectedValue();
                         if(p == null){
                             JOptionPane.showMessageDialog(main,"Please select a Profile first.");
                             launch.setEnabled(true);
+                            downloadFile.setEnabled(true);
                             return;
                         }
 
-                        String destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "/" + p.getFile();
+                        String destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "-" + p.getFile();
+
+                        File saveLocaton = new File(destination);
+
+                        System.out.println("Start download");
+
+                        FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
+
+                        while (!status.isComplete()) {
+                            progress.setMaximum((int) status.getBytesTotal());
+                            progress.setValue((int) status.getBytesRead());
+                            progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + ")");
+                        }
+
+                        System.out.println("Download complete");
+
+                        downloadFile.setEnabled(true);
+                        launch.setEnabled(true);
+                    }
+                });
+                t.start();
+            }
+        });
+
+        launch.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Thread t = new Thread(() -> {
+                    try{
+                        downloadFile.setEnabled(false);
+                        launch.setEnabled(false);
+
+                        Profile p = profiles.getSelectedValue();
+                        if(p == null){
+                            JOptionPane.showMessageDialog(main,"Please select a Profile first.");
+                            launch.setEnabled(true);
+                            downloadFile.setEnabled(true);
+                            return;
+                        }
+
+                        String destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "-" + p.getFile();
 
                         File saveLocaton = new File(destination);
 
@@ -890,16 +1105,26 @@ public class Main extends JFrame {
                             status.setComplete(true);
                         }
                         try {
-                            Process pr = Runtime.getRuntime().exec("java -jar " + destination + " " + TOKEN);
+                            System.out.println("java -jar " + destination + " " + TOKEN);
+                            Process pr = Runtime.getRuntime().exec("java -jar " + new File(destination).getName() + " " + TOKEN,null,new File(destination).getParentFile());
+                            String error = new String(pr.getErrorStream().readAllBytes());
+                            if(!error.isEmpty()){
+                                if(error.contains("Error")){
+                                    JOptionPane.showMessageDialog(main.getContentPane(),error + "\nConsider Re-Downloading the file.","Error",JOptionPane.ERROR_MESSAGE);
+                                }
+                            }
                         } catch (IOException ex) {
+                            ex.printStackTrace();
                             launch.setEnabled(true);
+                            downloadFile.setEnabled(true);
                             throw new RuntimeException(ex);
                         }
                         launch.setEnabled(true);
-
+                        downloadFile.setEnabled(true);
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         launch.setEnabled(true);
+                        downloadFile.setEnabled(true);
                     }
                 });
                 t.start();
@@ -909,7 +1134,12 @@ public class Main extends JFrame {
     }
     public static void main(String[] args) throws Exception {
         IntelliJTheme.setup(Main.class.getResourceAsStream("/themes/theme.purple.json"));
+        //UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
         File file = new File("odlauncher/config.json");
+        File dumpFile = new File("dump.json");
+        dumpFile.createNewFile();
+        //TODO reactivate
+        //System.setErr(new PrintStream(dumpFile));
         if(!file.exists()){
             file.getParentFile().mkdirs();
             file.createNewFile();

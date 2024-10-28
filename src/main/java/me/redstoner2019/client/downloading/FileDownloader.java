@@ -4,6 +4,7 @@ import me.redstoner2019.server.CacheServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -60,14 +61,14 @@ public class FileDownloader {
     }
 
     public static void downloadFile(String fileUrl, String destinationFilePath, DownloadStatus status) {
+        status.reset();
         File file = new File(destinationFilePath);
-        if(!file.exists()) {
-            file.getParentFile().mkdirs();
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        if(file.exists()) file.delete();
+        file.getParentFile().mkdirs();
+        try {
+            file.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         Thread t = new Thread(new Runnable() {
             @Override
@@ -95,8 +96,6 @@ public class FileDownloader {
 
                         byte[] dataRead = data.readNBytes(packetSize);
 
-                        status.setBytesRead(data.available());
-
                         while (dataRead.length > 0) {
                             status.setBytesRead(status.getBytesRead() + dataRead.length);
                             outputStream.write(dataRead);
@@ -107,6 +106,7 @@ public class FileDownloader {
                         outputStream.close();
                         System.out.println("File downloaded successfully!");
                     } else {
+                        JOptionPane.showMessageDialog(null, "Failed to download file: " + response, "Error", JOptionPane.ERROR_MESSAGE);
                         System.err.println("Failed to download file: " + response);
                         System.err.println("File: " + fileUrl);
                     }
