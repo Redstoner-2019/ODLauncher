@@ -76,8 +76,10 @@ public class FileDownloader {
                 try{
                     URL url = new URL(fileUrl);
                     URLConnection urlConnection = url.openConnection();
+                    urlConnection.setReadTimeout(5000);
                     HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
                     httpURLConnection.setRequestMethod("GET");
+                    httpURLConnection.setReadTimeout(5000);
                     httpURLConnection.connect();
 
                     int response = httpURLConnection.getResponseCode();
@@ -90,7 +92,7 @@ public class FileDownloader {
                     if (response == 200) {
                         InputStream data = urlConnection.getInputStream();
 
-                        int packetSize = 1024*128;
+                        int packetSize = 1024*32;
 
                         System.out.println("Packet: " + packetSize);
 
@@ -115,6 +117,8 @@ public class FileDownloader {
                     status.setComplete(true);
                 }catch (Exception e){
                     e.printStackTrace();
+                    JOptionPane.showMessageDialog(null,"Download failed: " + e + "\nPlease check your Internet connection.", "Error", JOptionPane.ERROR_MESSAGE);
+                    status.setComplete(true);
                 }
             }
         });

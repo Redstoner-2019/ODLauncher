@@ -139,15 +139,21 @@ public class Main extends JFrame {
          * init setup
          */
 
-        JSONObject result = authenticatorClient.tokeninfo(TOKEN);
-        if(!result.getString("data").equals("token-not-found")){
-            displayname = result.getString("displayname");
-            username = result.getString("username");
-            loggedInAs.setText("Logged in as: " + displayname);
-            actionInfo.setText("Login success.");
-            actionInfo.setForeground(Color.GREEN);
-            isLoggedIn = true;
+        try{
+            JSONObject result = authenticatorClient.tokeninfo(TOKEN);
+            if(!result.getString("data").equals("token-not-found")){
+                displayname = result.getString("displayname");
+                username = result.getString("username");
+                loggedInAs.setText("Logged in as: " + displayname);
+                actionInfo.setText("Login success.");
+                actionInfo.setForeground(Color.GREEN);
+                isLoggedIn = true;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
+
+
 
         {
             JPanel panel = new JPanel();
@@ -181,7 +187,7 @@ public class Main extends JFrame {
             profileInfo.setHorizontalAlignment(JLabel.CENTER);
 
             progress.setStringPainted(true);
-            progress.setString("Downloading 0/0 MB (0.00%)");
+            progress.setString("No Download Running");
             progress.setFont(new Font("Arial",Font.PLAIN,12));
 
             topPanel.add(scrollPane);
@@ -360,6 +366,8 @@ public class Main extends JFrame {
                                     g.drawString("?",15,52);
                                     g.dispose();
                                     image.setIcon(new ImageIcon(bf));
+                                    image.repaint();
+                                    image.revalidate();
                                 }
                             }
                             case JFileChooser.CANCEL_OPTION -> {
@@ -924,7 +932,7 @@ public class Main extends JFrame {
                                 JSONObject fileInfo = new JSONObject(new String(new URL("http://" + Utilities.getIPData().getString("cache-server") + "/api/" + p.getGame() + "/" + p.getVersion()).openConnection().getInputStream().readAllBytes())).getJSONObject(p.getFile());
                                 String infoText = "# File Info: \n ## Filename:      " + p.getFile() +
                                         "\n ## Download URL:  " + fileInfo.getString("browser_download_url") +
-                                        "\n ## Size:          " + fileInfo.getInt("size") +
+                                        "\n ## Size:          " + String.format("%.2f",fileInfo.getInt("size") / 1024f / 1024f) + " MB"+
                                         "\n ## Downloads:     " + fileInfo.getInt("download_count") +
                                         "\n";
                                 infoText+=GitHub.fetchReadmeContent(profiles.getSelectedValue().getAuthor(),profiles.getSelectedValue().getGame());
@@ -1058,16 +1066,38 @@ public class Main extends JFrame {
 
                         FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
 
+                        long lastSpeedUpdate = System.currentTimeMillis();
+                        long speed = 0;
+                        long lastBytes = 0;
+
                         while (!status.isComplete()) {
+                            if(System.currentTimeMillis() - lastSpeedUpdate > 1000){
+                                lastSpeedUpdate = System.currentTimeMillis();
+                                speed = status.getBytesRead() - lastBytes;
+                                lastBytes = status.getBytesRead();
+                            }
                             progress.setMaximum((int) status.getBytesTotal());
                             progress.setValue((int) status.getBytesRead());
-                            progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + ")");
+
+                            String timeLeft = "Waiting...";
+
+                            if(speed > 0){
+                                long time = ((status.getBytesTotal() - status.getBytesRead()) / speed) * 1000;
+                                timeLeft = Util.convertMillisToHMS(time);
+                            }
+
+                            progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + "), " + String.format("%.2f",speed / 1024f / 1024f) + " MB/s, Time left: " + timeLeft);
                         }
 
-                        System.out.println("Download complete");
+                        Notification.notification("ODLauncher","Completed download of " + p.getGame() + " - " + p.getVersion());
+                        System.out.println("Download Complete");
 
                         downloadFile.setEnabled(true);
                         launch.setEnabled(true);
+                        progress.setValue(100);
+                        progress.setMaximum(100);
+
+                        progress.setString("Download Complete (" + p.getGame() + " - " + p.getVersion() + ")");
                     }
                 });
                 t.start();
@@ -1096,11 +1126,34 @@ public class Main extends JFrame {
 
                         if(!saveLocaton.exists()) {
                             FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
+
+                            long lastSpeedUpdate = System.currentTimeMillis();
+                            long speed = 0;
+                            long lastBytes = 0;
+
                             while (!status.isComplete()) {
+                                if(System.currentTimeMillis() - lastSpeedUpdate > 1000){
+                                    lastSpeedUpdate = System.currentTimeMillis();
+                                    speed = status.getBytesRead() - lastBytes;
+                                    lastBytes = status.getBytesRead();
+                                }
+
+                                String timeLeft = "Waiting...";
+
+                                if(speed > 0){
+                                    long time = ((status.getBytesTotal() - status.getBytesRead()) / speed) * 1000;
+                                    timeLeft = Util.convertMillisToHMS(time);
+                                }
                                 progress.setMaximum((int) status.getBytesTotal());
                                 progress.setValue((int) status.getBytesRead());
-                                progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + ")");
+                                progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + "), " + String.format("%.2f",speed / 1024f / 1024f) + " MB/s, Time left: " + timeLeft);
                             }
+
+                            progress.setString("Download Complete (" + p.getGame() + " - " + p.getVersion() + ")");
+                            Notification.notification("ODLauncher","Completed download of " + p.getGame() + " - " + p.getVersion());
+                            System.out.println("Download Complete");
+                            progress.setValue(100);
+                            progress.setMaximum(100);
                         } else {
                             status.setComplete(true);
                         }
@@ -1134,6 +1187,7 @@ public class Main extends JFrame {
     }
     public static void main(String[] args) throws Exception {
         IntelliJTheme.setup(Main.class.getResourceAsStream("/themes/theme.purple.json"));
+        Notification.init();
         //UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
         File file = new File("odlauncher/config.json");
         File dumpFile = new File("dump.json");

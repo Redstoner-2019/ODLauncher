@@ -1,8 +1,7 @@
 package me.redstoner2019;
 
-import com.vladsch.flexmark.html.HtmlRenderer;
-import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.util.ast.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -27,16 +26,21 @@ public class Util {
         //System.out.println("Max:                  " + (nonHeapUsage.getMax() / 1024 / 1024) + " MB");
     }
 
-    public static String convertMarkdownToHtml(String markdownText) {
-        // Initialize the parser and renderer
+    public static String convertMarkdownToHtml(String markdown) {
         Parser parser = Parser.builder().build();
         HtmlRenderer renderer = HtmlRenderer.builder().build();
-
-        // Parse the markdown text to a document node
-        Node document = parser.parse(markdownText);
-
-        // Render the document node to HTML
+        var document = parser.parse(markdown);
         return "<html>" + renderer.render(document) + "</html>";
-        //return markdownText;
+    }
+
+    public static String convertMillisToHMS(long millis) {
+        long seconds = millis / 1000; // Convert milliseconds to seconds
+        long hours = seconds / 3600;   // Calculate hours
+        seconds %= 3600;                // Remaining seconds after extracting hours
+        long minutes = seconds / 60;    // Calculate minutes
+        seconds %= 60;                  // Remaining seconds after extracting minutes
+
+        // Format to hh:mm:ss
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 }

@@ -4,20 +4,20 @@
       "game" : "FNaF",
       "file" : "FiveNightsAtFreddys-windows-x64.jar",
       "author" : "Redstoner-2019",
-      "name" : "FNaF",
-      "icon" : "C:\\Users\\l.paepke\\Documents\\modern art.png",
-      "version" : "v1.3.0-alpha.1",
+      "name" : "FNaF - newest",
+      "icon" : "C:\\Users\\l.paepke\\Downloads\\images.jpg",
+      "version" : "v1.3.0-alpha.6",
       "uuid" : "1cda907e-15c9-4de1-be0a-9ef18ff420f6"
     },
     "260b2c6b-5ec6-4dd9-9142-d27d457c393a" : {
       "game" : "FNaF",
-      "file" : "FiveNightsAtFreddys-windows-x64.jar",
+      "file" : "FiveNightsAtFreddys.jar",
       "author" : "Redstoner-2019",
-      "name" : "FNaF - test",
+      "name" : "FNAF - old",
       "icon" : "odlauncher/befdc132-e7b6-429b-a521-922c8ec3a357.webp",
-      "version" : "v1.3.0-alpha",
+      "version" : "v0.0.1",
       "uuid" : "260b2c6b-5ec6-4dd9-9142-d27d457c393a"
     }
   },
-  "token" : "n4vXMSe53ho9yIYL4F2wd4AxjGRF3B1Aq89+gJlm6d4tGRK0/bn8Tef1watF0nHv/l1vWOfIe2gFv33lmC53pjmqHQXFF4j8A1WVH2RiQkOck6vP5UKiEndnxdYsehJSmyVjeUJfi99rsgpnqOkE7rRc8m+CBdEUFLUGAPoQCSo="
+  "token" : "GX5AOEKodnbD3CY0QZeFDj8vq3KFB3TMCNaWDbehm3fe6JH/+uT8Kp1f7DSUH6s6wOkuPpyi538Jvtr72AYzGG6LvC4w8sCcnXmZJyW2fvThIl3rZ/+CFJru2jLUi+GZKIdRrNZLiU9h8ydC/3VN3zAbq8DrGAEoVGRfRlJE5uk="
 }

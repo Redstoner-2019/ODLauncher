@@ -1,3 +1,4 @@
+import me.redstoner2019.Notification;
 import me.redstoner2019.client.downloading.FileDownloader;
 import me.redstoner2019.server.CacheServer;
 import org.json.JSONArray;
@@ -6,7 +7,8 @@ import org.json.JSONObject;
 import java.net.URL;
 
 public class Test {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
+        Notification.notification("Test Title","Test Message");
         /*JSONObject utilData = Utilities.getIPData();
         System.out.println(utilData);
         JSONObject repos = utilData.getJSONObject("repos");
@@ -27,7 +29,7 @@ public class Test {
             }
 
         }*/
-        System.out.println(CacheServer.prettyJSON(getFileInfo("Redstoner-2019","FNaF","v1.3.0-alpha.1","FiveNightsAtFreddys-windows-x64.jar").toString()));
+        //System.out.println(CacheServer.prettyJSON(getFileInfo("Redstoner-2019","FNaF","v1.3.0-alpha.1","FiveNightsAtFreddys-windows-x64.jar").toString()));
     }
 
     public static JSONObject getFileInfo(String owner, String repo, String version, String filename) throws Exception {
