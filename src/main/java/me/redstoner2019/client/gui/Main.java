@@ -11,6 +11,7 @@ import me.redstoner2019.client.github.CacheRequest;
 import me.redstoner2019.client.github.GitHub;
 import me.redstoner2019.server.CacheServer;
 import org.json.JSONObject;
+import raven.toast.Notifications;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -1183,6 +1184,15 @@ public class Main extends JFrame {
                 t.start();
             }
         });
+
+        Notifications.getInstance().setJFrame(null);
+        //Notifications.getInstance().show(Notifications.Type.SUCCESS, Notifications.Location.BOTTOM_RIGHT, "Success");
+        //Notifications.getInstance().show(Notifications.Location.BOTTOM_RIGHT,new JLabel("Test"));
+        //Notifications.getInstance().show(new JButton("My Custom Button"));
+        //Notifications.getInstance().clear(Notifications.Location.TOP_RIGHT);
+        //Notifications.getInstance().clearAll();
+
+        Notification.notification("Test","Test Message");
 
     }
     public static void main(String[] args) throws Exception {

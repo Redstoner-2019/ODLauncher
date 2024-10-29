@@ -8,7 +8,7 @@ import java.net.URL;
 
 public class Test {
     public static void main(String[] args) {
-        Notification.notification("Test Title","Test Message");
+        Notification.showCustomNotification("Test Title","Test Message","C:\\Users\\Redstoner_2019\\Pictures/reved_0112.jpg");
         /*JSONObject utilData = Utilities.getIPData();
         System.out.println(utilData);
         JSONObject repos = utilData.getJSONObject("repos");

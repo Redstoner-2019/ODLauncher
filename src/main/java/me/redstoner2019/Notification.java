@@ -1,6 +1,9 @@
 package me.redstoner2019;
 
+import raven.toast.Notifications;
+
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -31,12 +34,7 @@ public class Notification {
 
         popupMenu.add(exitItem);
 
-        try {
-            trayIcon = new TrayIcon(ImageIO.read(new File("C:\\Users\\l.paepke\\Downloads\\images.jpg")), "ODLauncher", popupMenu);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
+        trayIcon = new TrayIcon(new BufferedImage(50,50,1), "ODLauncher", popupMenu);
         trayIcon.setImageAutoSize(true);
         try {
             tray.add(trayIcon);
@@ -46,6 +44,68 @@ public class Notification {
     }
 
     public static void notification(String title, String message){
-        trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO);
+        /*if (!SystemTray.isSupported()) {
+            System.out.println("System tray is not supported!");
+            return;
+        }
+        if(trayIcon == null) init();
+        try {
+            trayIcon.setImage(ImageIO.read(new File("C:\\Users\\Redstoner_2019\\Pictures/reved_0112.jpg")));
+            trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }*/
+
+        //Notifications.getInstance().show(Notifications.Type.INFO, Notifications.Location.BOTTOM_RIGHT, title + ": " + message);
+        JPanel panel = new JPanel();
+
+        JTextArea titleLabel = new JTextArea(title);
+        JTextArea messageLabel = new JTextArea(message);
+
+        titleLabel.setEditable(false);
+        messageLabel.setEditable(false);
+
+        panel.add(titleLabel);
+        panel.add(messageLabel);
+
+        titleLabel.setBounds(0,0,400,40);
+        messageLabel.setBounds(0,40,400,110);
+
+        panel.setLayout(null);
+        panel.setSize(400,150);
+
+        Notifications.getInstance().show(Notifications.Location.BOTTOM_RIGHT,panel);
+        Toolkit.getDefaultToolkit().beep();
+    }
+
+    public static void showCustomNotification(String title, String message, String imagePath) {
+        // Create a JWindow to act as the custom notification
+        JWindow notificationWindow = new JWindow();
+        notificationWindow.setLayout(new BorderLayout());
+
+        // Create components
+        JLabel titleLabel = new JLabel(title, JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        JLabel messageLabel = new JLabel(message, JLabel.CENTER);
+        JLabel imageLabel = new JLabel(new ImageIcon(imagePath));
+
+        // Add components to window
+        notificationWindow.add(titleLabel, BorderLayout.NORTH);
+        notificationWindow.add(imageLabel, BorderLayout.CENTER);
+        notificationWindow.add(messageLabel, BorderLayout.SOUTH);
+
+        // Set window size and position
+        notificationWindow.setSize(300, 200);
+        notificationWindow.setLocationRelativeTo(null);  // Center it
+        notificationWindow.setVisible(true);
+
+        // Auto-hide the window after a few seconds
+        new Timer(3000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                notificationWindow.setVisible(false);
+                notificationWindow.dispose();
+            }
+        }).start();
     }
 }
