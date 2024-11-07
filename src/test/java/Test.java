@@ -1,5 +1,7 @@
+import com.formdev.flatlaf.IntelliJTheme;
 import me.redstoner2019.Notification;
 import me.redstoner2019.client.downloading.FileDownloader;
+import me.redstoner2019.client.gui.Main;
 import me.redstoner2019.server.CacheServer;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -8,7 +10,8 @@ import java.net.URL;
 
 public class Test {
     public static void main(String[] args) {
-        Notification.showCustomNotification("Test Title","Test Message","C:\\Users\\Redstoner_2019\\Pictures/reved_0112.jpg");
+        IntelliJTheme.setup(Main.class.getResourceAsStream("/themes/theme.purple.json"));
+        Notification.notification("test","test message test message test message test message test message");
         /*JSONObject utilData = Utilities.getIPData();
         System.out.println(utilData);
         JSONObject repos = utilData.getJSONObject("repos");

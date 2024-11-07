@@ -285,6 +285,7 @@ public class Notifications {
             window.setFocusableWindowState(false);
             window.pack();
             toastNotificationPanel.setDialog(window);
+            window.setAlwaysOnTop(true);
         }
 
         public NotificationAnimation(Location location, long duration, JComponent component) {
@@ -296,6 +297,7 @@ public class Notifications {
             window.setContentPane(component);
             window.setFocusableWindowState(false);
             window.setSize(component.getPreferredSize());
+            window.setAlwaysOnTop(true);
         }
 
         private void installDefault() {

@@ -141,14 +141,17 @@ public class Main extends JFrame {
          */
 
         try{
-            JSONObject result = authenticatorClient.tokeninfo(TOKEN);
-            if(!result.getString("data").equals("token-not-found")){
-                displayname = result.getString("displayname");
-                username = result.getString("username");
-                loggedInAs.setText("Logged in as: " + displayname);
-                actionInfo.setText("Login success.");
-                actionInfo.setForeground(Color.GREEN);
-                isLoggedIn = true;
+            authenticatorClient.setup();
+            if(authenticatorClient.isConnected()){
+                JSONObject result = authenticatorClient.tokeninfo(TOKEN);
+                if(!result.getString("data").equals("token-not-found")){
+                    displayname = result.getString("displayname");
+                    username = result.getString("username");
+                    loggedInAs.setText("Logged in as: " + displayname);
+                    actionInfo.setText("Login success.");
+                    actionInfo.setForeground(Color.GREEN);
+                    isLoggedIn = true;
+                }
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -873,6 +876,8 @@ public class Main extends JFrame {
             }
         });
 
+        JFrame frame = this;
+
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -896,6 +901,10 @@ public class Main extends JFrame {
                     case "account-doesnt-exist" -> {
                         actionInfo.setText("The account '" + usernameField.getText() + "' doesn't exist.");
                         actionInfo.setForeground(Color.RED);
+                        //Notification.notification("ODLauncher","This account doesn't exist.");
+                        Notifications.getInstance().setJFrame(frame);
+                        Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"This account doesn't exist.");
+                        Notifications.getInstance().setJFrame(null);
                     }
                     case "login-success" -> {
                         isLoggedIn = true;
@@ -906,10 +915,18 @@ public class Main extends JFrame {
                         loggedInAs.setText("Logged in as: " + displayname);
                         actionInfo.setText("Login success.");
                         actionInfo.setForeground(Color.GREEN);
+                        //Notification.notification("ODLauncher","Login success.");
+                        Notifications.getInstance().setJFrame(frame);
+                        Notifications.getInstance().show(Notifications.Type.SUCCESS,Notifications.Location.TOP_CENTER,"Login success.");
+                        Notifications.getInstance().setJFrame(null);
                     }
                     case "incorrect-password" -> {
                         actionInfo.setText("Password incorrect.");
                         actionInfo.setForeground(Color.RED);
+                        //Notification.notification("ODLauncher","Incorrect password.");
+                        Notifications.getInstance().setJFrame(frame);
+                        Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"Incorrect password.");
+                        Notifications.getInstance().setJFrame(null);
                     }
                 }
                 config.put("token",TOKEN);
@@ -993,6 +1010,7 @@ public class Main extends JFrame {
                 isLoggedIn = false;
                 loggedInAs.setText("Not logged in");
                 actionInfo.setText("Logged out.");
+                Notifications.getInstance().show(Notifications.Type.SUCCESS, Notifications.Location.TOP_CENTER,"Logged out.");
                 actionInfo.setForeground(Color.RED);
                 config.put("token",TOKEN);
                 try {
@@ -1090,7 +1108,8 @@ public class Main extends JFrame {
                             progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + "), " + String.format("%.2f",speed / 1024f / 1024f) + " MB/s, Time left: " + timeLeft);
                         }
 
-                        Notification.notification("ODLauncher","Completed download of " + p.getGame() + " - " + p.getVersion());
+                        //Notification.notification("ODLauncher","Completed download of " + p.getGame() + " - " + p.getVersion());
+                        Notifications.getInstance().show(Notifications.Type.SUCCESS, Notifications.Location.BOTTOM_RIGHT,10000,"Completed download of " + p.getGame() + " - " + p.getVersion());
                         System.out.println("Download Complete");
 
                         downloadFile.setEnabled(true);
@@ -1192,7 +1211,7 @@ public class Main extends JFrame {
         //Notifications.getInstance().clear(Notifications.Location.TOP_RIGHT);
         //Notifications.getInstance().clearAll();
 
-        Notification.notification("Test","Test Message");
+        //Notification.notification("Test","Test Message");
 
     }
     public static void main(String[] args) throws Exception {

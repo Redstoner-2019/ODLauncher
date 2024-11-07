@@ -68,13 +68,18 @@ public class Notification {
         panel.add(titleLabel);
         panel.add(messageLabel);
 
-        titleLabel.setBounds(0,0,400,40);
-        messageLabel.setBounds(0,40,400,110);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+
+        messageLabel.setLineWrap(true);
+
+        titleLabel.setBounds(0,0,400,titleLabel.getFont().getSize()+10);
+        messageLabel.setBounds(0,titleLabel.getFont().getSize()+15,400,150-titleLabel.getFont().getSize());
 
         panel.setLayout(null);
         panel.setSize(400,150);
 
-        Notifications.getInstance().show(Notifications.Location.BOTTOM_RIGHT,panel);
+        Notifications.getInstance().show(Notifications.Location.BOTTOM_RIGHT,5000,panel);
         Toolkit.getDefaultToolkit().beep();
     }
 
