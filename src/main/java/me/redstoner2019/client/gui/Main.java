@@ -9,7 +9,9 @@ import me.redstoner2019.client.downloading.DownloadStatus;
 import me.redstoner2019.client.downloading.FileDownloader;
 import me.redstoner2019.client.github.CacheRequest;
 import me.redstoner2019.client.github.GitHub;
+import me.redstoner2019.client.request.Requests;
 import me.redstoner2019.server.CacheServer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import raven.toast.Notifications;
 
@@ -237,7 +239,6 @@ public class Main extends JFrame {
             panel.setLayout(layout);
             tabbedPane.addTab("Launcher", panel);
         }
-
         {
             JPanel panel = new JPanel();
 
@@ -421,7 +422,6 @@ public class Main extends JFrame {
 
             tabbedPane.addTab("Profiles", panel);
         }
-
         {
             JPanel base = new JPanel();
 
@@ -470,7 +470,6 @@ public class Main extends JFrame {
                 base.add(panel);
                 baseLayout.registerComponent(panel,new Position(0,0));
             }
-
             {
                 /**
                  * Middle
@@ -881,24 +880,20 @@ public class Main extends JFrame {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(!authenticatorClient.isConnected()){
-                    try {
-                        authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
-                        authenticatorClient.setAddress(Utilities.getIPData().getString("auth-server"));
-                    } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
-                    }
-                    authenticatorClient.setup();
-                    if(!authenticatorClient.isConnected()){
-                        JOptionPane.showMessageDialog(main.getContentPane(),"Couldn't connect to auth Server. Please try again later.");
-                        return;
-                    }
+                System.out.println("Test");
+                JSONObject result;
+                try {
+                    JSONObject request = new JSONObject();
+                    request.put("username",usernameField.getText());
+                    request.put("password",new String(passwordField.getPassword()));
+                    result = Requests.request("http://158.220.105.209:8080/login",request);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
+                    return;
                 }
 
-                JSONObject result = authenticatorClient.loginAccount(usernameField.getText(),new String(passwordField.getPassword()));
-
-                switch (result.getString("data")) {
-                    case "account-doesnt-exist" -> {
+                switch (result.getString("message")) {
+                    case "user-not-found" -> {
                         actionInfo.setText("The account '" + usernameField.getText() + "' doesn't exist.");
                         actionInfo.setForeground(Color.RED);
                         //Notification.notification("ODLauncher","This account doesn't exist.");
@@ -906,10 +901,14 @@ public class Main extends JFrame {
                         Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"This account doesn't exist.");
                         Notifications.getInstance().setJFrame(null);
                     }
-                    case "login-success" -> {
+                    case "success" -> {
                         isLoggedIn = true;
                         TOKEN = result.getString("token");
-                        result = authenticatorClient.tokeninfo(TOKEN);
+
+                        JSONObject request = new JSONObject();
+                        request.put("token",TOKEN);
+
+                        result = Requests.request("http://158.220.105.209:8080/tokenInfo",request);
                         displayname = result.getString("displayname");
                         username = result.getString("username");
                         loggedInAs.setText("Logged in as: " + displayname);
