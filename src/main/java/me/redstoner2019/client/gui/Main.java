@@ -76,15 +76,21 @@ public class Main extends JFrame {
 
         if(config.has("token")) TOKEN = config.getString("token");
 
-        try {
-            authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
-            authenticatorClient.setAddress(Utilities.getIPData().getString("auth-server"));
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
-        }
-        authenticatorClient.setup();
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
+                    authenticatorClient.setAddress(Utilities.getIPData().getString("auth-server"));
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
+                }
+                authenticatorClient.setup();
 
-        System.out.println("Connecting to " + authenticatorClient.getAddress() + ":" + authenticatorClient.getPort());
+                System.out.println("Connecting to " + authenticatorClient.getAddress() + ":" + authenticatorClient.getPort());
+            }
+        });
+        t.start();
 
         setSize(1280,720);
         setResizable(true);
@@ -143,23 +149,25 @@ public class Main extends JFrame {
          */
 
         try{
-            authenticatorClient.setup();
-            if(authenticatorClient.isConnected()){
-                JSONObject result = authenticatorClient.tokeninfo(TOKEN);
-                if(!result.getString("data").equals("token-not-found")){
-                    displayname = result.getString("displayname");
-                    username = result.getString("username");
-                    loggedInAs.setText("Logged in as: " + displayname);
-                    actionInfo.setText("Login success.");
-                    actionInfo.setForeground(Color.GREEN);
-                    isLoggedIn = true;
-                }
+            JSONObject request = new JSONObject();
+            request.put("token",TOKEN);
+            JSONObject result = Requests.request("http://158.220.105.209:8080/verifyToken",request);
+
+            if(result.getInt("status") == 0){
+                request = new JSONObject();
+                request.put("token",TOKEN);
+                result = Requests.request("http://158.220.105.209:8080/tokenInfo",request);
+
+                displayname = result.getString("displayname");
+                username = result.getString("username");
+                loggedInAs.setText("Logged in as: " + displayname);
+                actionInfo.setText("Login success.");
+                actionInfo.setForeground(Color.GREEN);
+                isLoggedIn = true;
             }
         }catch (Exception e){
             e.printStackTrace();
         }
-
-
 
         {
             JPanel panel = new JPanel();
@@ -1176,17 +1184,72 @@ public class Main extends JFrame {
                         } else {
                             status.setComplete(true);
                         }
+
                         try {
-                            System.out.println("java -jar " + destination + " " + TOKEN);
+                            String startCommand = "java -jar " + new File(destination).getAbsolutePath().toString() + TOKEN;
+                            System.out.println(destination);
+                            System.out.println(startCommand);
+
+                            //ProcessBuilder bp = new ProcessBuilder("java","-jar",new File(destination).getName());
+                            //bp.directory(new File(destination).getParentFile());
+                            //Process pr = bp.start();
+
+                            Process pr = Runtime.getRuntime().exec(startCommand,null,new File(destination).getParentFile());
+
+                            Scanner errorScanner = new Scanner(pr.getErrorStream());
+                            Scanner outputScanner = new Scanner(pr.getInputStream());
+
+                            Thread th = new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Console console = new Console(pr);
+
+                                    console.run();
+
+                                    console.log(Level.INFO, startCommand);
+                                    console.log(Level.INFO, "Process starting");
+
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            while(pr.isAlive()){
+                                                try{
+                                                    if(pr.getErrorStream().available() > 0){
+                                                        String error = errorScanner.nextLine();
+                                                        console.log(Level.ERR, error);
+                                                        System.out.println("ERR "+  error);
+                                                    }else if(pr.getInputStream().available() > 0){
+                                                        String info = outputScanner.nextLine();
+                                                        console.log(Level.INFO, info);
+                                                        System.out.println("INFO " + info);
+                                                    }
+                                                }catch (Exception e){}
+                                            }
+                                            console.log(Level.INFO, "");
+                                            console.log(Level.INFO, "Process ended with exit code " + pr.exitValue());
+                                        }
+                                    }).start();
+                                }
+                            });
+                            th.start();
+
+
+
+                            /*System.out.println("java -jar " + destination + " " + TOKEN);
                             Process pr = Runtime.getRuntime().exec("java -jar " + new File(destination).getName() + " " + TOKEN,null,new File(destination).getParentFile());
                             String error = new String(pr.getErrorStream().readAllBytes());
+
+
+
+                            //TODO: connect to console
                             if(!error.isEmpty()){
                                 if(error.contains("Error")){
                                     JOptionPane.showMessageDialog(main.getContentPane(),error + "\nConsider Re-Downloading the file.","Error",JOptionPane.ERROR_MESSAGE);
                                 }
-                            }
-                        } catch (IOException ex) {
+                            }*/
+                        } catch (Exception ex) {
                             ex.printStackTrace();
+                            //console.close();
                             launch.setEnabled(true);
                             downloadFile.setEnabled(true);
                             throw new RuntimeException(ex);
