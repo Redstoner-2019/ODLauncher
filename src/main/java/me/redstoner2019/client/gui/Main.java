@@ -1186,15 +1186,12 @@ public class Main extends JFrame {
                         }
 
                         try {
-                            String startCommand = "java -jar " + new File(destination).getAbsolutePath().toString() + TOKEN;
-                            System.out.println(destination);
-                            System.out.println(startCommand);
+                            //String executionFile = "C:\\Users\\Redstoner_2019\\Downloads\\odlaunchernew.jar";
+                            String executionFile = destination;
+                            String startCommand = "java -jar " + new File(destination).getName() + " " + TOKEN + " false";
 
-                            //ProcessBuilder bp = new ProcessBuilder("java","-jar",new File(destination).getName());
-                            //bp.directory(new File(destination).getParentFile());
-                            //Process pr = bp.start();
-
-                            Process pr = Runtime.getRuntime().exec(startCommand,null,new File(destination).getParentFile());
+                            Process pr = Runtime.getRuntime().exec(startCommand,null,new File(executionFile).getParentFile());
+                            //Process pr = Runtime.getRuntime().exec("java -jar " + new File(destination).getName() + " " + TOKEN,null,new File(destination).getParentFile());
 
                             Scanner errorScanner = new Scanner(pr.getErrorStream());
                             Scanner outputScanner = new Scanner(pr.getInputStream());
@@ -1208,6 +1205,7 @@ public class Main extends JFrame {
 
                                     console.log(Level.INFO, startCommand);
                                     console.log(Level.INFO, "Process starting");
+                                    console.log(Level.WARN, new File(executionFile).exists() + "");
 
                                     new Thread(new Runnable() {
                                         @Override
@@ -1223,7 +1221,9 @@ public class Main extends JFrame {
                                                         console.log(Level.INFO, info);
                                                         System.out.println("INFO " + info);
                                                     }
-                                                }catch (Exception e){}
+                                                }catch (Exception e){
+                                                    e.printStackTrace();
+                                                }
                                             }
                                             console.log(Level.INFO, "");
                                             console.log(Level.INFO, "Process ended with exit code " + pr.exitValue());
@@ -1232,26 +1232,13 @@ public class Main extends JFrame {
                                 }
                             });
                             th.start();
-
-
-
-                            /*System.out.println("java -jar " + destination + " " + TOKEN);
-                            Process pr = Runtime.getRuntime().exec("java -jar " + new File(destination).getName() + " " + TOKEN,null,new File(destination).getParentFile());
-                            String error = new String(pr.getErrorStream().readAllBytes());
-
-
-
-                            //TODO: connect to console
-                            if(!error.isEmpty()){
-                                if(error.contains("Error")){
-                                    JOptionPane.showMessageDialog(main.getContentPane(),error + "\nConsider Re-Downloading the file.","Error",JOptionPane.ERROR_MESSAGE);
-                                }
-                            }*/
+                            System.out.println("End");
                         } catch (Exception ex) {
                             ex.printStackTrace();
                             //console.close();
                             launch.setEnabled(true);
                             downloadFile.setEnabled(true);
+                            JOptionPane.showMessageDialog(main.getContentPane(),ex.getMessage() + "\nConsider Re-Downloading the file.","Error",JOptionPane.ERROR_MESSAGE);
                             throw new RuntimeException(ex);
                         }
                         launch.setEnabled(true);
@@ -1260,6 +1247,7 @@ public class Main extends JFrame {
                         ex.printStackTrace();
                         launch.setEnabled(true);
                         downloadFile.setEnabled(true);
+                        JOptionPane.showMessageDialog(main.getContentPane(),ex.getMessage() + "\nConsider Re-Downloading the file.","Error",JOptionPane.ERROR_MESSAGE);
                     }
                 });
                 t.start();
