@@ -60,6 +60,21 @@ public class FileDownloader {
         return dataString;
     }
 
+    public static boolean fileExists(String fileUrl){
+        try{
+            URL url = new URL(fileUrl);
+            URLConnection urlConnection = url.openConnection();
+            urlConnection.setReadTimeout(5000);
+            HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
+            httpURLConnection.setRequestMethod("GET");
+            httpURLConnection.setReadTimeout(5000);
+            httpURLConnection.connect();
+            return httpURLConnection.getResponseCode() == 200;
+        }catch (Exception e){
+            return false;
+        }
+    }
+
     public static void downloadFile(String fileUrl, String destinationFilePath, DownloadStatus status) {
         status.reset();
         File file = new File(destinationFilePath);

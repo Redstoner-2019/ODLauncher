@@ -1147,10 +1147,10 @@ public class Main extends JFrame {
                             return;
                         }
 
+                        System.out.println(FileDownloader.fileExists("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/resources.zip"));
+
                         String destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "-" + p.getFile();
-
                         File saveLocaton = new File(destination);
-
                         if(!saveLocaton.exists()) {
                             FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
 
@@ -1173,7 +1173,7 @@ public class Main extends JFrame {
                                 }
                                 progress.setMaximum((int) status.getBytesTotal());
                                 progress.setValue((int) status.getBytesRead());
-                                progress.setString("Downloading " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + "), " + String.format("%.2f",speed / 1024f / 1024f) + " MB/s, Time left: " + timeLeft);
+                                progress.setString("Downloading Main File " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + "), " + String.format("%.2f",speed / 1024f / 1024f) + " MB/s, Time left: " + timeLeft);
                             }
 
                             progress.setString("Download Complete (" + p.getGame() + " - " + p.getVersion() + ")");
@@ -1186,12 +1186,9 @@ public class Main extends JFrame {
                         }
 
                         try {
-                            //String executionFile = "C:\\Users\\Redstoner_2019\\Downloads\\odlaunchernew.jar";
-                            String executionFile = destination;
                             String startCommand = "java -jar " + new File(destination).getName() + " " + TOKEN + " false";
 
-                            Process pr = Runtime.getRuntime().exec(startCommand,null,new File(executionFile).getParentFile());
-                            //Process pr = Runtime.getRuntime().exec("java -jar " + new File(destination).getName() + " " + TOKEN,null,new File(destination).getParentFile());
+                            Process pr = Runtime.getRuntime().exec(startCommand,null,new File(destination).getParentFile());
 
                             Scanner errorScanner = new Scanner(pr.getErrorStream());
                             Scanner outputScanner = new Scanner(pr.getInputStream());
@@ -1205,21 +1202,24 @@ public class Main extends JFrame {
 
                                     console.log(Level.INFO, startCommand);
                                     console.log(Level.INFO, "Process starting");
-                                    console.log(Level.WARN, new File(executionFile).exists() + "");
+                                    console.log(Level.WARN, new File(destination).exists() + "");
 
                                     new Thread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            while(pr.isAlive()){
+                                            while(true){
+                                                try {
+                                                    if (!pr.isAlive() && !(pr.getErrorStream().available() > 0 || pr.getInputStream().available() > 0)) break;
+                                                } catch (IOException ex) {
+                                                    throw new RuntimeException(ex);
+                                                }
                                                 try{
                                                     if(pr.getErrorStream().available() > 0){
                                                         String error = errorScanner.nextLine();
                                                         console.log(Level.ERR, error);
-                                                        System.out.println("ERR "+  error);
                                                     }else if(pr.getInputStream().available() > 0){
                                                         String info = outputScanner.nextLine();
                                                         console.log(Level.INFO, info);
-                                                        System.out.println("INFO " + info);
                                                     }
                                                 }catch (Exception e){
                                                     e.printStackTrace();
@@ -1227,6 +1227,9 @@ public class Main extends JFrame {
                                             }
                                             console.log(Level.INFO, "");
                                             console.log(Level.INFO, "Process ended with exit code " + pr.exitValue());
+                                            if(pr.exitValue() != 0){
+                                                JOptionPane.showMessageDialog(main.getContentPane(),"The process terminated unexpectedly. Please check the logs for further information. \n\nExit code " + pr.exitValue(),"Error",JOptionPane.ERROR_MESSAGE);
+                                            }
                                         }
                                     }).start();
                                 }
