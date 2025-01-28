@@ -5,16 +5,19 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.swing.*;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class FileDownloader {
 
@@ -58,6 +61,112 @@ public class FileDownloader {
         new FileOutputStream(file).write(dataString.getBytes());
 
         return dataString;
+    }
+
+    public static int downloadRelease(String releaseUrl, String destinationPath, DownloadStatus status){
+        try{
+            URL url = new URL(releaseUrl + "/game.json");
+            URLConnection urlConnection = url.openConnection();
+            urlConnection.setReadTimeout(5000);
+            HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
+            httpURLConnection.setRequestMethod("GET");
+            httpURLConnection.setReadTimeout(5000);
+            httpURLConnection.connect();
+
+            int response = httpURLConnection.getResponseCode();
+
+            String data = new String(httpURLConnection.getInputStream().readAllBytes());
+            data = new String(new FileInputStream("C:\\Users\\l.paepke\\Downloads\\game.json").readAllBytes());
+
+            JSONObject jsonObject = new JSONObject(data);
+
+            if(new File(destinationPath).exists()) deleteFolder(new File(destinationPath).toPath());
+
+            System.out.println("Versions:");
+            int index = 0;
+            for(String s : jsonObject.getJSONObject("versions").keySet()){
+                System.out.println(index + ". " + s);
+                index++;
+            }
+            System.out.println("Enter version:");
+            Scanner scanner = new Scanner(System.in);
+            String versionName = scanner.nextLine();
+
+            JSONObject versionObject = jsonObject.getJSONObject("versions").optJSONObject(versionName);
+
+            JSONObject main = versionObject.getJSONObject("main");
+            JSONObject files = versionObject.getJSONObject("files");
+
+            File saveFile = new File(destinationPath + main.getString("saveLocation"));
+            if(!saveFile.exists()){
+                saveFile.getParentFile().mkdirs();
+                saveFile.createNewFile();
+            }
+
+            String startCmd = versionObject.getString("launch");
+            startCmd = startCmd.replace("%filename%",saveFile.toString());
+
+            System.out.println(saveFile.getAbsolutePath());
+            System.out.println("Downloading " + releaseUrl + "/" + main.getString("name") + " to " + destinationPath + main.getString("saveLocation"));
+            downloadFile(releaseUrl + "/" + main.getString("name"), saveFile.toString(), status);
+
+            while (!status.isComplete()) {
+                double percent = ((double) status.getBytesRead() / status.getBytesTotal()) * 100;
+                System.out.println(status.getBytesRead() + " / " + status.getBytesTotal() + String.format(" - %.2f%%", percent));
+                Thread.sleep(100);
+            }
+            System.out.println(status.getBytesRead() + " / " + status.getBytesTotal() + String.format(" - %.2f%% Done!", 100.0));
+
+            for(String fileName : files.keySet()){
+                JSONObject file = files.getJSONObject(fileName);
+
+                saveFile = new File(destinationPath + file.getString("location") + fileName);
+                if(!saveFile.exists()){
+                    saveFile.getParentFile().mkdirs();
+                    saveFile.createNewFile();
+                }
+
+                status.reset();
+
+                System.out.println("Downloading " + fileName + " to " + saveFile);
+                downloadFile(releaseUrl + "/" + fileName, saveFile.toString(), status);
+
+                while (!status.isComplete()) {
+                    double percent = ((double) status.getBytesRead() / status.getBytesTotal()) * 100;
+                    System.out.println(status.getBytesRead() + " / " + status.getBytesTotal() + String.format(" - %.2f%%", percent));
+                    Thread.sleep(100);
+                }
+                System.out.println(status.getBytesRead() + " / " + status.getBytesTotal() + String.format(" - %.2f%% Done!", 100.0));
+
+                for (String action : file.getJSONObject("actions").keySet()) {
+                    switch (action){
+                        case "unzip"-> {
+                            JSONObject actionObject = file.getJSONObject("actions").optJSONObject(action);
+                            System.out.println("Unzipping " + destinationPath + file.getString("location") + fileName + " to " + destinationPath + actionObject.getString("location"));
+
+                            status.reset();
+                            ZipUtil.unzip(destinationPath + file.getString("location") + fileName, destinationPath + actionObject.getString("location"), status);
+                            while (!status.isComplete()) {
+                                double percent = ((double) status.getBytesRead() / status.getBytesTotal()) * 100;
+                                System.out.println(status.getBytesRead() + " / " + status.getBytesTotal() + String.format(" - %.2f%%", percent));
+                                Thread.sleep(100);
+                            }
+                            System.out.println(status.getBytesRead() + " / " + status.getBytesTotal() + String.format(" - %.2f%% Done!", 100.0));
+
+                            if(actionObject.getBoolean("deleteAfter")){
+                                new File(destinationPath + file.getString("location") + fileName).delete();
+                                System.out.println("Deleting " + destinationPath + file.getString("location") + fileName);
+                            }
+                        }
+                    }
+                }
+
+                System.out.println(startCmd);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     public static boolean fileExists(String fileUrl){
@@ -138,6 +247,21 @@ public class FileDownloader {
             }
         });
         t.start();
+    }
 
+    public static void deleteFolder(Path path) throws IOException {
+        Files.walkFileTree(path, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file); // Delete each file
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                Files.delete(dir); // Delete the directory after its contents are deleted
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }
