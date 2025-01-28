@@ -1147,16 +1147,55 @@ public class Main extends JFrame {
                             return;
                         }
 
-                        System.out.println(FileDownloader.fileExists("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/resources.zip"));
-
                         String destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "-" + p.getFile();
                         File saveLocaton = new File(destination);
                         if(!saveLocaton.exists()) {
-                            FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
+                            destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/resources.zip";
+
+                            FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/resources.zip", destination, status);
 
                             long lastSpeedUpdate = System.currentTimeMillis();
                             long speed = 0;
                             long lastBytes = 0;
+
+                            while (!status.isComplete()) {
+                                if(System.currentTimeMillis() - lastSpeedUpdate > 1000){
+                                    lastSpeedUpdate = System.currentTimeMillis();
+                                    speed = status.getBytesRead() - lastBytes;
+                                    lastBytes = status.getBytesRead();
+                                }
+
+                                String timeLeft = "Waiting...";
+
+                                if(speed > 0){
+                                    long time = ((status.getBytesTotal() - status.getBytesRead()) / speed) * 1000;
+                                    timeLeft = Util.convertMillisToHMS(time);
+                                }
+                                progress.setMaximum((int) status.getBytesTotal());
+                                progress.setValue((int) status.getBytesRead());
+                                progress.setString("Downloading Main File " + String.format("%.2f",status.getBytesRead() / 1024f / 1024f) + "MB / " + String.format("%.2f",status.getBytesTotal() / 1024f / 1024f) + " MB (" + String.format("%.2f%%", ((float) status.getBytesRead() / (float) status.getBytesTotal()) * 100f) + "), " + String.format("%.2f",speed / 1024f / 1024f) + " MB/s, Time left: " + timeLeft);
+                            }
+
+                            progress.setString("Download Complete (" + p.getGame() + " - " + p.getVersion() + ")");
+                            Notification.notification("ODLauncher","Completed download of " + p.getGame() + " - " + p.getVersion());
+                            System.out.println("Download Complete");
+                            progress.setValue(100);
+                            progress.setMaximum(100);
+
+                            status.reset();
+
+                            /**
+                             *
+                             *
+                             */
+
+                            destination = "files/" + p.getAuthor() + "/" + p.getGame() + "/" + p.getVersion() + "-" + p.getFile();
+
+                            FileDownloader.downloadFile("https://github.com/" + p.getAuthor() + "/" + p.getGame() + "/releases/download/" + p.getVersion() + "/" +p.getFile(), destination, status);
+
+                            lastSpeedUpdate = System.currentTimeMillis();
+                            speed = 0;
+                            lastBytes = 0;
 
                             while (!status.isComplete()) {
                                 if(System.currentTimeMillis() - lastSpeedUpdate > 1000){
@@ -1202,7 +1241,6 @@ public class Main extends JFrame {
 
                                     console.log(Level.INFO, startCommand);
                                     console.log(Level.INFO, "Process starting");
-                                    console.log(Level.WARN, new File(destination).exists() + "");
 
                                     new Thread(new Runnable() {
                                         @Override

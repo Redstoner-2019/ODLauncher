@@ -64,6 +64,7 @@ public class FileDownloader {
     }
 
     public static int downloadRelease(String releaseUrl, String destinationPath, DownloadStatus status){
+        String version = "v1.4.0-alpha.1";
         try{
             URL url = new URL(releaseUrl + "/game.json");
             URLConnection urlConnection = url.openConnection();
@@ -76,7 +77,7 @@ public class FileDownloader {
             int response = httpURLConnection.getResponseCode();
 
             String data = new String(httpURLConnection.getInputStream().readAllBytes());
-            data = new String(new FileInputStream("C:\\Users\\l.paepke\\Downloads\\game.json").readAllBytes());
+            //data = new String(new FileInputStream("C:\\Users\\l.paepke\\Downloads\\game.json").readAllBytes());
 
             JSONObject jsonObject = new JSONObject(data);
 
@@ -97,7 +98,7 @@ public class FileDownloader {
             JSONObject main = versionObject.getJSONObject("main");
             JSONObject files = versionObject.getJSONObject("files");
 
-            File saveFile = new File(destinationPath + main.getString("saveLocation"));
+            File saveFile = new File(destinationPath + main.getString("saveLocation").replaceAll("%version%",versionName) + main.getString("name"));
             if(!saveFile.exists()){
                 saveFile.getParentFile().mkdirs();
                 saveFile.createNewFile();
@@ -120,7 +121,7 @@ public class FileDownloader {
             for(String fileName : files.keySet()){
                 JSONObject file = files.getJSONObject(fileName);
 
-                saveFile = new File(destinationPath + file.getString("location") + fileName);
+                saveFile = new File(destinationPath + file.getString("location").replaceAll("%version%",version) + fileName);
                 if(!saveFile.exists()){
                     saveFile.getParentFile().mkdirs();
                     saveFile.createNewFile();
