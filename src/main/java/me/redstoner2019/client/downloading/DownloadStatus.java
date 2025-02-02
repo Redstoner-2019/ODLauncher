@@ -5,6 +5,7 @@ public class DownloadStatus {
     private long bytesRead = 0;
     private boolean complete = false;
     private int status = 200;
+    private String message = null;
 
     public DownloadStatus() {
 
@@ -40,6 +41,19 @@ public class DownloadStatus {
 
     public void setComplete(boolean complete) {
         this.complete = complete;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public double getPercent(){
+        if(bytesTotal == 0) return 0;
+        return ((double) bytesRead / bytesTotal) * 100;
     }
 
     public void reset(){
