@@ -81,7 +81,7 @@ public class FileDownloader {
                     int response = httpURLConnection.getResponseCode();
 
                     String data = new String(httpURLConnection.getInputStream().readAllBytes());
-                    data = new String(new FileInputStream("C:\\Users\\l.paepke\\Downloads\\game.json").readAllBytes());
+                    //data = new String(new FileInputStream("C:\\Users\\l.paepke\\Downloads\\game.json").readAllBytes());
 
                     JSONObject jsonObject = new JSONObject(data);
 
