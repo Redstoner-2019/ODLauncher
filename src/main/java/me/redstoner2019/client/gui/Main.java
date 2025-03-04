@@ -954,6 +954,9 @@ public class Main extends JFrame {
                         try {
                             if(profiles.getSelectedIndex() != -1){
                                 Profile p = profiles.getSelectedValue();
+
+                                System.out.println("http://" + /*Utilities.getIPData().getString("cache-server") +*/ "/api/" + p.getGame() + "/" + p.getVersion());
+
                                 JSONObject fileInfo = new JSONObject(new String(new URL("http://" + Utilities.getIPData().getString("cache-server") + "/api/" + p.getGame() + "/" + p.getVersion()).openConnection().getInputStream().readAllBytes())).getJSONObject(p.getFile());
                                 String infoText = "# File Info: \n ## Filename:      " + p.getFile() +
                                         "\n ## Download URL:  " + fileInfo.getString("browser_download_url") +
