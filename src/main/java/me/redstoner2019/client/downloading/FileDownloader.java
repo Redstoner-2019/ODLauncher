@@ -63,7 +63,38 @@ public class FileDownloader {
         return dataString;
     }
 
+    public static void deleteRelease(String releaseUrl){
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    URL url = new URL(releaseUrl + "/game.json");
+                    URLConnection urlConnection = url.openConnection();
+                    urlConnection.setReadTimeout(5000);
+                    HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
+                    httpURLConnection.setRequestMethod("GET");
+                    httpURLConnection.setReadTimeout(5000);
+                    httpURLConnection.connect();
+                }catch (Exception e){
+
+                }
+            }
+        });
+        t.start();
+    }
+
     public static int downloadRelease(String releaseUrl, String destinationPath, DownloadStatus status, DownloadStatus generalStatus){
+        if(new File(destinationPath + "/installed").exists()) {
+            generalStatus.setComplete(true);
+            generalStatus.setMessage("Already installed");
+            generalStatus.setBytesRead(1);
+            generalStatus.setBytesTotal(1);
+
+            status.setMessage("Already installed");
+            status.setBytesRead(1);
+            status.setBytesTotal(1);
+            return 0;
+        }
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -81,7 +112,6 @@ public class FileDownloader {
                     int response = httpURLConnection.getResponseCode();
 
                     String data = new String(httpURLConnection.getInputStream().readAllBytes());
-                    //data = new String(new FileInputStream("C:\\Users\\l.paepke\\Downloads\\game.json").readAllBytes());
 
                     JSONObject jsonObject = new JSONObject(data);
 
@@ -110,7 +140,14 @@ public class FileDownloader {
                     }
 
                     String startCmd = versionObject.getString("launch");
-                    startCmd = startCmd.replace("%filename%",saveFile.toString());
+                    startCmd = startCmd.replace("%filename%",main.getString("saveLocation").replaceAll("%version%",versionName).substring(1) + main.getString("name"));
+
+                    JSONObject launch = new JSONObject();
+                    launch.put("launch",startCmd);
+                    new File(destinationPath).mkdirs();
+                    FileOutputStream fos = new FileOutputStream(destinationPath + "/launch.json");
+                    fos.write(launch.toString(3).getBytes());
+                    fos.close();
 
                     int steps = 1;
                     for(String fileName : files.keySet()){
@@ -182,6 +219,14 @@ public class FileDownloader {
                     e.printStackTrace();
                 }
                 generalStatus.setComplete(true);
+
+                try {
+                    System.out.println(destinationPath + "/installed");
+                    new File(destinationPath).mkdirs();
+                    new File(destinationPath + "/installed").createNewFile();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
         t.start();
