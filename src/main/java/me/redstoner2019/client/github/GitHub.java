@@ -3,10 +3,18 @@ package me.redstoner2019.client.github;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -15,6 +23,56 @@ public class GitHub {
     private static final String TOKEN = "";
     private static final String GITHUB_API_URL_TEMPLATE = "https://api.github.com/repos/%s/%s/releases";
     public static String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(("Redstoner-2019:" + TOKEN).getBytes());
+    public static HashMap<String, Attatchment> cachedFiles = new HashMap<>();
+
+    public static JSONArray getAttatchments(String releaseUrl) throws Exception {
+        if(cachedFiles.containsKey(releaseUrl) && LocalDateTime.now().isBefore(cachedFiles.get(releaseUrl).getFetch())){
+            return cachedFiles.get(releaseUrl).getData();
+        }
+
+        //cachedFiles.put(releaseUrl, new Attatchment(new JSONArray()));
+
+        //if(true){
+        //    return new JSONArray();
+        //}
+
+        String apiUrl = convertToApiUrl(releaseUrl);
+        if (apiUrl == null) {
+            System.err.println("Invalid GitHub release URL");
+            return new JSONArray();
+        }
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI(apiUrl))
+                .header("Accept", "application/vnd.github.v3+json")
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            System.err.println("Failed to fetch release info: " + response.statusCode());
+            return new JSONArray();
+        }
+
+        JSONObject json = new JSONObject(response.body());
+        JSONArray assets = json.getJSONArray("assets");
+
+        cachedFiles.put(releaseUrl, new Attatchment(assets));
+
+        return assets;
+    }
+
+    public static String convertToApiUrl(String releaseUrl) {
+        Pattern pattern = Pattern.compile("https://github\\.com/([^/]+)/([^/]+)/releases/tag/(.+)");
+        Matcher matcher = pattern.matcher(releaseUrl);
+        if (matcher.matches()) {
+            String owner = matcher.group(1);
+            String repo = matcher.group(2);
+            String tag = matcher.group(3);
+            return String.format("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag);
+        }
+        return null;
+    }
 
     public static List<String> fetchAllReleases(String owner, String repo) throws Exception {
         List<String> releases = new ArrayList<>();
@@ -126,6 +184,31 @@ public class GitHub {
             return new String(connection.getInputStream().readAllBytes());
         } else {
             return "# No README.md found in " + repo + " by " + owner + ".";
+        }
+    }
+
+    public static class Attatchment {
+        public LocalDateTime fetch = LocalDateTime.now().plusMinutes(5);
+        public JSONArray data = new JSONArray();
+
+        public Attatchment(JSONArray data) {
+            this.data = data;
+        }
+
+        public LocalDateTime getFetch() {
+            return fetch;
+        }
+
+        public void setFetch(LocalDateTime fetch) {
+            this.fetch = fetch;
+        }
+
+        public JSONArray getData() {
+            return data;
+        }
+
+        public void setData(JSONArray data) {
+            this.data = data;
         }
     }
 }

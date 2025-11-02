@@ -2,6 +2,8 @@ package me.redstoner2019.client.gui;
 
 import org.json.JSONObject;
 
+import java.util.Objects;
+
 public class Version {
     private Game game;
     private String releaseURL;
@@ -83,6 +85,18 @@ public class Version {
         if(o.has("version")) version.setVersion(o.getString("version")); else version.version = "";
         if(o.has("versionNumber")) version.setVersionNumber(o.getInt("versionNumber")); else version.versionNumber = 0;
         return version;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Version version1 = (Version) o;
+        return versionNumber == version1.versionNumber && Objects.equals(game, version1.game) && Objects.equals(releaseURL, version1.releaseURL) && Objects.equals(id, version1.id) && Objects.equals(version, version1.version);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(game, releaseURL, id, version, versionNumber);
     }
 
     @Override

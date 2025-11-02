@@ -1,7 +1,5 @@
 package me.redstoner2019.client.github;
 
-import me.redstoner2019.Main;
-import me.redstoner2019.Utilities;
 import me.redstoner2019.client.gui.Game;
 import me.redstoner2019.client.gui.Version;
 import me.redstoner2019.util.http.Method;
@@ -12,10 +10,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import static me.redstoner2019.client.gui.Main.TOKEN;
 
@@ -35,8 +30,6 @@ public class CacheRequest {
                 gameList.add(new Game(o.getString("owner"),o.getLong("created"),o.getString("name"),o.getString("id")));
             }
 
-            System.out.println("Games found " + gameList.size() + " games." );
-
             return gameList;
         } catch (Exception e) {
             e.printStackTrace();
@@ -45,7 +38,6 @@ public class CacheRequest {
     }
     public static List<Version> getVersions(Game game){
         if(game == null) return new ArrayList<>();
-        System.out.println("Getting versions for " + game + " from cache server...");
         try {
             JSONObject request = new JSONObject();
             request.put("token", TOKEN);
@@ -61,6 +53,7 @@ public class CacheRequest {
             }
 
             versionList.sort(Comparator.comparingInt(Version::getVersionNumber));
+            Collections.reverse(versionList);
 
             return versionList;
         } catch (Exception e) {
@@ -68,19 +61,30 @@ public class CacheRequest {
             return new ArrayList<>();
         }
     }
-    public static List<String> getFiles(String game, String version){
+
+    public static Version getNewestVersion(Game game){
+        if(game == null) return new Version();
         try {
-            String cacheAddress = Utilities.getIPData().getString("auth-server");
-            URL url = new URL("http://" + cacheAddress + "/api/" + game + "/" + version);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            JSONObject info = new JSONObject(new String(connection.getInputStream().readAllBytes()));
+            JSONObject request = new JSONObject();
+            request.put("token", TOKEN);
+            request.put("game", game.getId());
 
-            List<String> filelist = new ArrayList<>();
-            filelist.addAll(info.keySet());
+            JSONObject result = Requests.request(Method.POST, "https://stats.redstonerdev.io/stats/versions/getAll", request);
+            JSONArray versions = new JSONArray(result.getString("body"));
 
-            return filelist;
-        } catch (IOException e) {
-            return new ArrayList<>();
+            List<Version> versionList = new ArrayList<>();
+            for (int i = 0; i < versions.length(); i++) {
+                JSONObject version = versions.getJSONObject(i);
+                versionList.add(new Version(game, version.optString("releaseURL",""), version.getString("id"), version.getString("version"), version.getInt("versionNumber")));
+            }
+
+            versionList.sort(Comparator.comparingInt(Version::getVersionNumber));
+            Collections.reverse(versionList);
+
+            return versionList.get(0);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Version();
         }
     }
 }

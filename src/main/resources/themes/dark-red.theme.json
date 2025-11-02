@@ -1,0 +1,116 @@
+{
+  "name": "Stony Dark Red",
+  "author": "Lukas Paepke (Stony) · theme scaffold by GPT",
+  "dark": true,
+
+  "colors": {
+    "foreground":        "#E6EAF2",
+    "muted":             "#99A1B3",
+    "background":        "#0B0F14",
+
+    "panelBg":           "#121722",
+    "componentBg":       "#111723",
+    "tableBg":           "#0F141B",
+
+    "border":            "#1D2430",
+    "grid":              "#212938",
+
+    "accentColor":       "#EF4444",
+    "accentHover":       "#FF6B6B",
+    "accentPressed":     "#B91C1C",
+
+    "selectionBg":       "rgba(239,68,68,0.22)",
+    "selectionFg":       "#FFFFFF",
+
+    "thumb":             "#202737",
+    "track":             "#0C1119",
+
+    "error":             "#B91C1C",
+    "warning":           "#F97316",
+    "success":           "#10B981",
+    "info":              "#60A5FA",
+
+    "disabledFg":        "#6B7385",
+    "link":              "#FCA5A5"
+  },
+
+  "fonts": {
+    "default": { "family": "Segoe UI, Inter, Roboto, Arial", "size": 13, "style": "plain" }
+  },
+
+  "ui": {
+    "*": {
+      "Component.arc": 16,
+      "Button.arc": 14,
+      "TextComponent.arc": 14,
+      "ProgressBar.arc": 999,
+      "ScrollBar.thumbArc": 12,
+
+      "Component.focusWidth": 1,
+      "Component.innerFocusWidth": 1,
+      "Component.focusColor": "@accentColor",
+      "Component.errorFocusColor": "@error",
+      "Component.warningFocusColor": "@warning",
+
+      "Component.borderColor": "@border",
+      "Component.background": "@componentBg",
+      "Panel.background": "@panelBg",
+      "Label.foreground": "@foreground",
+
+      "Button.background": "#171C27",
+      "Button.foreground": "@foreground",
+      "Button.disabledBackground": "#0D1420",
+      "Button.disabledText": "@disabledFg",
+      "Button.borderColor": "#2A3342",
+      "Button.focusedBorderColor": "@accentColor",
+      "Button.hoverBackground": "#1B2331",
+      "Button.pressedBackground": "#151B26",
+      "Button.selectedBackground": "@accentColor",
+      "Button.selectedForeground": "#FFFFFF",
+
+      "ToggleButton.selectedBackground": "@accentColor",
+      "ToggleButton.selectedForeground": "#FFFFFF",
+
+      "CheckBox.icon.borderColor": "@border",
+      "CheckBox.icon.selectedBorderColor": "@accentColor",
+      "CheckBox.icon.selectedBackground": "@accentColor",
+
+      "RadioButton.icon.selectedBorderColor": "@accentColor",
+      "RadioButton.icon.selectedBackground": "@accentColor",
+
+      "ComboBox.background": "@componentBg",
+      "ComboBox.buttonArrowColor": "@muted",
+      "ComboBox.selectionBackground": "@accentColor",
+      "ComboBox.selectionForeground": "#FFFFFF",
+
+      "List.background": "@componentBg",
+      "List.selectionBackground": "@selectionBg",
+      "List.selectionForeground": "@selectionFg",
+
+      "Tree.background": "@componentBg",
+      "Tree.selectionBackground": "@selectionBg",
+      "Tree.selectionForeground": "@selectionFg",
+
+      "Table.background": "@tableBg",
+      "Table.gridColor": "@grid",
+      "Table.selectionBackground": "@selectionBg",
+      "Table.selectionForeground": "@selectionFg",
+
+      "TabbedPane.contentAreaColor": "@panelBg",
+      "TabbedPane.selectedBackground": "@panelBg",
+      "TabbedPane.underlineColor": "@accentColor",
+
+      "ScrollBar.width": 12,
+      "ScrollBar.thumb": "@thumb",
+      "ScrollBar.track": "@track",
+
+      "Component.linkColor": "@link",
+      "Component.linkHoverColor": "@accentHover",
+      "Component.infoForeground": "@muted",
+
+      "PopupMenu.borderColor": "@border",
+      "ToolTip.background": "#0E1523",
+      "ToolTip.borderColor": "@border"
+    }
+  }
+}

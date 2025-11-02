@@ -83,6 +83,47 @@ public class FileDownloader {
         t.start();
     }
 
+    public static List<String> availableFor(String releaseUrl){
+        try{
+            if(releaseUrl.equals("")) return new ArrayList<>();
+            URL url = new URL(releaseUrl + "/game.json");
+            URLConnection urlConnection = url.openConnection();
+            urlConnection.setReadTimeout(5000);
+            HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
+            httpURLConnection.setRequestMethod("GET");
+            httpURLConnection.setReadTimeout(5000);
+            httpURLConnection.connect();
+
+            String data = new String(httpURLConnection.getInputStream().readAllBytes());
+
+            JSONObject jsonObject = new JSONObject(data);
+
+            return new ArrayList<>(jsonObject.getJSONObject("versions").keySet());
+        }catch (Exception e){
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public static String getReadme(String releaseUrl){
+        try{
+            URL url = new URL(releaseUrl.replaceAll("tag","download") + "/CHANGELOG.md");
+
+            URLConnection urlConnection = url.openConnection();
+            urlConnection.setReadTimeout(5000);
+            HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
+            httpURLConnection.setRequestMethod("GET");
+            httpURLConnection.setReadTimeout(5000);
+            httpURLConnection.connect();
+
+            String data = new String(httpURLConnection.getInputStream().readAllBytes());
+
+            return data;
+        }catch (Exception e){
+            return "# No changelog found\n\nThis release does not have a changelog.\n\nPlease check the release notes for more information.";
+        }
+    }
+
     public static int downloadRelease(String releaseUrl, String destinationPath, DownloadStatus status, DownloadStatus generalStatus){
         if(new File(destinationPath + "/installed").exists()) {
             generalStatus.setComplete(true);
@@ -126,9 +167,20 @@ public class FileDownloader {
                     System.out.println("Enter version:");
                     Scanner scanner = new Scanner(System.in);
                     //String versionName = scanner.nextLine();
-                    String versionName = "linux-x64";
 
-                    JSONObject versionObject = jsonObject.getJSONObject("versions").optJSONObject(versionName);
+                    String versionName = getOSIdentifier();
+
+                    System.out.println(versionName);
+
+                    JSONObject versionObject = jsonObject.getJSONObject("versions").optJSONObject(versionName, null);
+                    if(versionObject == null){
+                        versionObject = jsonObject.getJSONObject("versions").optJSONObject("Linux-x64", null);
+                    }
+
+                    if(versionObject == null){
+                        JOptionPane.showMessageDialog(null, "Operating System " + versionName + " not found", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
 
                     JSONObject main = versionObject.getJSONObject("main");
                     JSONObject files = versionObject.getJSONObject("files");
@@ -246,6 +298,35 @@ public class FileDownloader {
         }catch (Exception e){
             return false;
         }
+    }
+
+    public static String getOSIdentifier() {
+        String osName = System.getProperty("os.name").toLowerCase();
+        String arch = System.getProperty("os.arch").toLowerCase();
+
+        String os;
+        if (osName.contains("win")) {
+            os = "Windows";
+        } else if (osName.contains("mac")) {
+            os = "MacOS";
+        } else if (osName.contains("nux") || osName.contains("nix") || osName.contains("aix")) {
+            os = "Linux";
+        } else {
+            os = osName.replaceAll("\\s+", "");
+        }
+
+        String architecture;
+        if (arch.contains("64")) {
+            architecture = "x64";
+        } else if (arch.contains("86")) {
+            architecture = "x86";
+        } else if (arch.contains("arm")) {
+            architecture = arch.contains("64") ? "arm64" : "arm";
+        } else {
+            architecture = arch;
+        }
+
+        return os + "-" + architecture;
     }
 
     public static void downloadFile(String fileUrl, String destinationFilePath, DownloadStatus status) {

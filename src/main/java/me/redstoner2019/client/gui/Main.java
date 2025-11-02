@@ -1,10 +1,11 @@
 package me.redstoner2019.client.gui;
 
-import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.IntelliJTheme;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import me.redstoner2019.*;
 import me.redstoner2019.ODLayout;
-import me.redstoner2019.client.AuthenticatorClient;
 import me.redstoner2019.client.downloading.DownloadStatus;
 import me.redstoner2019.client.downloading.FileDownloader;
 import me.redstoner2019.client.github.CacheRequest;
@@ -30,21 +31,21 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Enumeration;
-import java.util.Properties;
+import java.util.Iterator;
 import java.util.Scanner;
 import java.util.UUID;
 
 public class Main extends JFrame {
     private DownloadStatus status = new DownloadStatus();
     private boolean offlineMode = false;
-    private AuthenticatorClient authenticatorClient = new AuthenticatorClient();
-    private StatisticClient statsClient = null;
     private Main main;
     private boolean isLoggedIn = false;
     public static String TOKEN = "";
     private String username = "";
     private String displayname = "";
+    private String launcherVersion = "1.2.7";
 
     private DefaultListModel<Profile> profilesModel = new DefaultListModel<>();
     private JList<Profile> profiles = new JList<>(profilesModel);
@@ -66,6 +67,7 @@ public class Main extends JFrame {
     private static JLabel image = new JLabel();
     private File configSaveFile = new File("odlauncher/config.json");
     private JSONObject config;
+    private JLabel message = new JLabel();
 
     public Main() throws IOException {
         main = this;
@@ -77,22 +79,6 @@ public class Main extends JFrame {
         config = new JSONObject(CacheServer.readFile(configSaveFile));
 
         if(config.has("token")) TOKEN = config.getString("token");
-
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
-                    authenticatorClient.setAddress(Utilities.getIPData().getString("auth-server"));
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
-                }
-                authenticatorClient.setup();
-
-                System.out.println("Connecting to " + authenticatorClient.getAddress() + ":" + authenticatorClient.getPort());
-            }
-        });
-        t.start();
 
         setSize(1280,720);
         setResizable(true);
@@ -150,27 +136,28 @@ public class Main extends JFrame {
          * init setup
          */
 
-        try{
-            JSONObject request = new JSONObject();
-            request.put("token",TOKEN);
-            System.out.println(request);
-            JSONObject result = Requests.request("https://auth.redstonerdev.io/verifyToken",request);
-            System.out.println(result.toString(3));
+        try {
+            HttpResponse<String> result = Unirest.get("https://api.redstonerdev.io/api/auth/token")
+                    .header("Authorization",TOKEN).asString();
 
-            if(result.getInt("status") == 0){
-                request = new JSONObject();
-                request.put("token",TOKEN);
-                result = Requests.request("https://auth.redstonerdev.io/tokenInfo",request);
-
-                displayname = result.getString("displayname");
-                username = result.getString("username");
-                loggedInAs.setText("Logged in as: " + displayname);
-                actionInfo.setText("Login success.");
-                actionInfo.setForeground(Color.GREEN);
-                isLoggedIn = true;
+            if(result.getStatus() == 200) {
+                JSONObject response = new JSONObject(result.getBody());
+                if(!response.getBoolean("expired")){
+                    response = response.getJSONObject("account");
+                    username = response.getString("username");
+                    displayname = response.getString("displayName");
+                    isLoggedIn = true;
+                    loggedInAs.setText("Logged in as: " + displayname);
+                    launch.setText("Launch (as" + displayname + ")");
+                    actionInfo.setText("Login success.");
+                }
+            } else {
+                TOKEN = "";
             }
-        }catch (Exception e){
-            e.printStackTrace();
+
+
+        } catch (UnirestException ex) {
+            throw new RuntimeException(ex);
         }
 
         {
@@ -329,7 +316,7 @@ public class Main extends JFrame {
                 JScrollPane filesScroll = new JScrollPane(files);
                 JButton saveProfiles = new JButton("Save");
 
-                JButton loadImage = new JButton("Load Icon...");
+                JButton loadImage = new JButton("Load Icon");
 
                 gamesLabel.setFont(new Font("Arial",Font.PLAIN,20));
                 versionsLabel.setFont(new Font("Arial",Font.PLAIN,20));
@@ -349,6 +336,7 @@ public class Main extends JFrame {
                 editPanel.add(profileName);
                 editPanel.add(saveProfiles);
                 editPanel.add(loadImage);
+                editPanel.add(message);
 
                 editLayout.registerComponent(gamesLabel,new Position(1,0),new Position(2,0));
                 editLayout.registerComponent(gamesScroll,new Position(1,2),new Position(2,2));
@@ -358,6 +346,7 @@ public class Main extends JFrame {
                 //editLayout.registerComponent(filesScroll,new Position(7,2),new Position(8,2));
                 editLayout.registerComponent(profileNameLabel,new Position(1,4));
                 editLayout.registerComponent(loadImage,new Position(1,6));
+                editLayout.registerComponent(message,new Position(1,8),new Position(4,8));
                 editLayout.registerComponent(profileName,new Position(2,4));
                 editLayout.registerComponent(saveProfiles,new Position(1,12));
 
@@ -594,8 +583,8 @@ public class Main extends JFrame {
 
                 JLabel usernameCreateLabel = new JLabel("Username:");
                 JLabel displaynameCreateLabel = new JLabel("Display Name:");
-                JLabel passwordCreateLabel = new JLabel("Password:");
-                JLabel passwordCreateConfirmLabel = new JLabel("Confirm Password:");
+                JLabel passwordCreateLabel = new JLabel("Email:");
+                JLabel passwordCreateConfirmLabel = new JLabel("Password:");
 
                 panel.add(usernameCreation);
                 panel.add(displayNameCreation);
@@ -674,7 +663,131 @@ public class Main extends JFrame {
              */
             JPanel settingsTab = new JPanel();
 
+            ODLayout layout = new ODLayout();
+
+            settingsTab.setLayout(layout);
+
+            layout.addRow(new Row(10,LengthType.PIXEL));
+            layout.addRow(new Row(20,LengthType.PIXEL));
+            layout.addRow(new Row(10,LengthType.PIXEL));
+            layout.addRow(new Row(20,LengthType.PIXEL));
+            layout.addRow(new Row(10,LengthType.PIXEL));
+            layout.addRow(new Row(30,LengthType.PIXEL));
+            layout.addRow(new Row(10,LengthType.PIXEL));
+            layout.addRow(new Row(30,LengthType.PIXEL));
+            layout.addRow(new Row(10,LengthType.PIXEL));
+            layout.addRow(new Row(30,LengthType.PIXEL));
+            layout.addRow(new Row(10,LengthType.PIXEL));
+            layout.addRow(new Row(Lengths.VARIABLE));
+            layout.addRow(new Row(10,LengthType.PIXEL));
+
+            layout.addColumn(new Column(10,LengthType.PIXEL));
+            layout.addColumn(new Column(200,LengthType.PIXEL));
+            layout.addColumn(new Column(10,LengthType.PIXEL));
+            layout.addColumn(new Column(Lengths.VARIABLE));
+            layout.addColumn(new Column(10,LengthType.PIXEL));
+
             tabbedPane.addTab("Settings", settingsTab);
+
+            JSONObject newest = Requests.getRequest("https://launcher.redstonerdev.io/launcher/newest.json");
+
+            JLabel currentVersionLabel = new JLabel("Current Version:");
+            JLabel currentVersionValueLabel = new JLabel("v" + launcherVersion);
+            JLabel latestVersionLabel = new JLabel("Latest Version:");
+            JLabel latestVersionValueLabel = new JLabel("v" + newest.getString("version"));
+            JLabel osLabel = new JLabel("OS " + FileDownloader.getOSIdentifier());
+
+            JButton refreshButton = new JButton("Refresh");
+            JButton updateButton = new JButton("Update");
+
+            settingsTab.add(currentVersionLabel);
+            settingsTab.add(currentVersionValueLabel);
+            settingsTab.add(latestVersionLabel);
+            settingsTab.add(latestVersionValueLabel);
+            settingsTab.add(refreshButton);
+            settingsTab.add(updateButton);
+            settingsTab.add(osLabel);
+
+            if(newest.getString("version").equals(launcherVersion)) {
+                updateButton.setEnabled(false);
+            } else {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        JOptionPane.showMessageDialog(null, "An Update is available! \nYour version: " + launcherVersion + "\nNewest Version: " + newest.getString("version"), "Info", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }).start();
+
+            }
+
+            refreshButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    JSONObject newest = Requests.getRequest("https://launcher.redstonerdev.io/launcher/newest.json");
+                    latestVersionValueLabel.setText("v" + newest.getString("version"));
+
+                    if(newest.getString("version").equals(launcherVersion)) {
+                        updateButton.setEnabled(false);
+                    }
+                }
+            });
+
+            updateButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    try {
+                        JSONObject newest = Requests.getRequest("https://launcher.redstonerdev.io/launcher/newest.json");
+
+                        File jarFile = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+
+                        String fullPath = jarFile.getAbsolutePath();
+
+                        String folderPath = jarFile.getParent();
+                        String jarName = jarFile.getName();
+
+                        updateButton.setEnabled(false);
+
+                        System.out.println("JAR full path: " + fullPath);
+                        System.out.println("Folder path: " + folderPath);
+                        System.out.println("JAR name: " + jarName);
+
+                        Thread t = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try{
+                                    URL url = new URL("https://launcher.redstonerdev.io/launcher/odlauncher.jar");
+                                    FileOutputStream fos = new FileOutputStream(folderPath + "/" + jarName);
+                                    try (InputStream in = url.openStream()) {
+                                        fos.write(in.readAllBytes());
+                                    }
+
+                                    System.out.println("Done!");
+
+                                    //Notifications.getInstance().show(Notifications.Type.SUCCESS, Notifications.Location.TOP_CENTER, "Update Success!\nPlease restart the launcher now.");
+                                    //Notification.showCustomNotification("Updating", "Update complete to version " + newest.getString("version") + ", please restart the launcher now.", "");
+                                    updateButton.setEnabled(true);
+                                    System.exit(0);
+                                } catch (Exception ex) {
+                                    Notifications.getInstance().show(Notifications.Type.ERROR, Notifications.Location.TOP_CENTER, "Update Failed\n" + ex.getMessage());
+                                    updateButton.setEnabled(true);
+                                }
+                            }
+                        });
+                        t.start();
+                    } catch (Exception ex) {
+                        Notifications.getInstance().show(Notifications.Type.ERROR, Notifications.Location.TOP_CENTER, "Update Failed\n" + ex.getMessage());
+                        updateButton.setEnabled(true);
+                    }
+                }
+            });
+
+            layout.registerComponent(currentVersionLabel,new Position(1,1));
+            layout.registerComponent(currentVersionValueLabel,new Position(3,1));
+            layout.registerComponent(latestVersionLabel,new Position(1,3));
+            layout.registerComponent(latestVersionValueLabel,new Position(3,3));
+            layout.registerComponent(refreshButton,new Position(1,5));
+            layout.registerComponent(updateButton,new Position(1,7));
+            layout.registerComponent(osLabel,new Position(1,9));
         }
 
         {
@@ -858,8 +971,16 @@ public class Main extends JFrame {
                 }
                 versionsModel.removeAllElements();
                 versionsModel.addAll(CacheRequest.getVersions(games.getSelectedValue()));
-                if(versionsModel.contains(profileJList.getSelectedValue().getVersion())) versions.setSelectedValue(profileJList.getSelectedValue().getVersion(),false);
-                else versions.setSelectedIndex(0);
+
+                Iterator<Version> vit = versionsModel.elements().asIterator();
+                int index = 0;
+                while (vit.hasNext()) {
+                    Version v = vit.next();
+                    if(v.getVersion().equals(profileJList.getSelectedValue().getVersion().getVersion())) versions.setSelectedIndex(index);
+                    index++;
+                }
+
+                //versions.setSelectedValue(profileJList.getSelectedValue().getVersion(),true);
             }
         });
 
@@ -872,6 +993,12 @@ public class Main extends JFrame {
                         if(profileJList.getSelectedIndex() == -1){
                             if(profilesModel.isEmpty()) createButton.getActionListeners()[0].actionPerformed(null);
                             profileJList.setSelectedIndex(0);
+                        }
+
+                        if(!DownloadGame.availableFor(profileJList.getSelectedValue().getVersion().getReleaseURL()).contains(FileDownloader.getOSIdentifier())) {
+                            message.setText("This game is not available for your OS! - " + FileDownloader.getOSIdentifier());
+                        } else {
+                            message.setText("");
                         }
                         //filesModel.removeAllElements();
                         //filesModel.addAll(CacheRequest.getFiles(games.getSelectedValue(),versions.getSelectedValue()));
@@ -888,51 +1015,65 @@ public class Main extends JFrame {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("Test");
-                JSONObject result;
+                HttpResponse<String> result;
                 try {
                     JSONObject request = new JSONObject();
                     request.put("username",usernameField.getText());
                     request.put("password",new String(passwordField.getPassword()));
-                    result = Requests.request("http://158.220.105.209:8080/login",request);
+                    request.put("duration",3);
+
+                    System.out.println(request.toString(3));
+
+                    result = Unirest.post("https://api.redstonerdev.io/api/auth/account/login")
+                            .header("Content-Type", "application/json")
+                            .body(request).asString();
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
                     return;
                 }
 
-                switch (result.getString("message")) {
-                    case "user-not-found" -> {
-                        actionInfo.setText("The account '" + usernameField.getText() + "' doesn't exist.");
-                        actionInfo.setForeground(Color.RED);
-                        //Notification.notification("ODLauncher","This account doesn't exist.");
-                        Notifications.getInstance().setJFrame(frame);
-                        Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"This account doesn't exist.");
-                        Notifications.getInstance().setJFrame(null);
-                    }
-                    case "success" -> {
-                        isLoggedIn = true;
-                        TOKEN = result.getString("token");
+                if(result == null) return;
 
-                        JSONObject request = new JSONObject();
-                        request.put("token",TOKEN);
+                switch (result.getStatus()) {
+                    case 200 -> {
+                        TOKEN = result.getBody();
 
-                        result = Requests.request("http://158.220.105.209:8080/tokenInfo",request);
-                        displayname = result.getString("displayname");
-                        username = result.getString("username");
-                        loggedInAs.setText("Logged in as: " + displayname);
-                        actionInfo.setText("Login success.");
+                        try {
+                            result = Unirest.get("https://api.redstonerdev.io/api/auth/token")
+                                    .header("Authorization",TOKEN).asString();
+
+                            if(result.getStatus() == 200) {
+                                JSONObject response = new JSONObject(result.getBody());
+                                if(!response.getBoolean("expired")){
+                                    response = response.getJSONObject("account");
+                                    username = response.getString("username");
+                                    displayname = response.getString("displayName");
+                                    launch.setText("Launch (as" + displayname + ")");
+                                }
+                            } else {
+                                actionInfo.setText("Username or password are incorrect.");
+                                actionInfo.setForeground(Color.RED);
+                                Notifications.getInstance().setJFrame(frame);
+                                Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"Username or password are incorrect.");
+                                Notifications.getInstance().setJFrame(null);
+                            }
+
+
+                        } catch (UnirestException ex) {
+                            throw new RuntimeException(ex);
+                        }
+
+                        actionInfo.setText("Logged in as '" + displayname + "'");
                         actionInfo.setForeground(Color.GREEN);
-                        //Notification.notification("ODLauncher","Login success.");
                         Notifications.getInstance().setJFrame(frame);
-                        Notifications.getInstance().show(Notifications.Type.SUCCESS,Notifications.Location.TOP_CENTER,"Login success.");
+                        Notifications.getInstance().show(Notifications.Type.SUCCESS,Notifications.Location.TOP_CENTER,"Logged in as '" + displayname + "'");
                         Notifications.getInstance().setJFrame(null);
                     }
-                    case "incorrect-password" -> {
-                        actionInfo.setText("Password incorrect.");
+                    case 403 -> {
+                        actionInfo.setText("Username or password are incorrect.");
                         actionInfo.setForeground(Color.RED);
-                        //Notification.notification("ODLauncher","Incorrect password.");
                         Notifications.getInstance().setJFrame(frame);
-                        Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"Incorrect password.");
+                        Notifications.getInstance().show(Notifications.Type.ERROR,Notifications.Location.TOP_CENTER,"Username or password are incorrect.");
                         Notifications.getInstance().setJFrame(null);
                     }
                 }
@@ -955,18 +1096,34 @@ public class Main extends JFrame {
                             if(profiles.getSelectedIndex() != -1){
                                 Profile p = profiles.getSelectedValue();
 
-                                System.out.println("http://" + /*Utilities.getIPData().getString("cache-server") +*/ "/api/" + p.getGame() + "/" + p.getVersion());
-
                                 //JSONObject fileInfo = new JSONObject(new String(new URL("http://" + Utilities.getIPData().getString("cache-server") + "/api/" + p.getGame() + "/" + p.getVersion()).openConnection().getInputStream().readAllBytes())).getJSONObject(p.getFile());
+                                JSONArray attatchments = GitHub.getAttatchments(p.getVersion().getReleaseURL());
+                                //JSONArray attatchments = new JSONArray();
+
                                 JSONObject fileInfo = new JSONObject();
 
-                                String infoText = "# File Info: \n ## Filename:      " + p.getFile() +
-                                        "\n ## Download URL:  " + fileInfo.optString("browser_download_url", "not available") +
-                                        "\n ## Size:          " + String.format("%.2f",fileInfo.optInt("size", 69) / 1024f / 1024f) + " MB"+
-                                        "\n ## Downloads:     " + fileInfo.optInt("download_count",0) +
-                                        "\n";
-                                infoText+=GitHub.fetchReadmeContent(profiles.getSelectedValue().getAuthor(),profiles.getSelectedValue().getGame().getName());
+                                for (int i = 0; i < attatchments.length(); i++) {
+                                    if(attatchments.getJSONObject(i).getString("name").contains(FileDownloader.getOSIdentifier().toLowerCase())) {
+                                        fileInfo = attatchments.getJSONObject(i);
+                                        break;
+                                    }
+                                }
+
+                                Version newestVersion = CacheRequest.getNewestVersion(p.getVersion().getGame());
+                                boolean isNewest = newestVersion.equals(p.getVersion());
+
+                                String infoText = "# File Info: " +
+                                        "\n ### Version:      " + (isNewest ? "<span style=\"color:green\">" + p.getVersion().getVersion() +  "</span>" : "<span style=\"color:red\">" + p.getVersion().getVersion() + " - new Version available: " + newestVersion.getVersion() +  "</span>") +
+                                        "\n ### Game:      " + p.getVersion().getGame().getName() +
+                                        "\n ### Filename:      " + fileInfo.optString("name","Not Available") +
+                                        "\n ### Download URL:  " + p.getVersion().getReleaseURL() +
+                                        "\n ### Size:          " + String.format("%.2f",fileInfo.optInt("size", 69) / 1024f / 1024f) + " MB"+
+                                        "\n ### Downloads:     " + fileInfo.optInt("download_count",0) +
+                                        "\n\n";
+                                infoText+=FileDownloader.getReadme(p.getVersion().getReleaseURL());
                                 info.setText(Util.convertMarkdownToHtml(infoText));
+                                versionInfo.getVerticalScrollBar().setUnitIncrement(16);
+                                versionInfo.getHorizontalScrollBar().setUnitIncrement(16);
                             } else {
                                 info.setText(Util.convertMarkdownToHtml("# No Profile Selected"));
                             }
@@ -982,35 +1139,29 @@ public class Main extends JFrame {
         createButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(!authenticatorClient.isConnected()){
-                    try {
-                        authenticatorClient.setPort(Utilities.getIPData().getInt("auth-server-port"));
-                        authenticatorClient.setAddress(Utilities.getIPData().getString("auth-server"));
-                        System.out.println("Connecting to " + authenticatorClient.getAddress() + " " + authenticatorClient.getPort());
-                    } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(main.getContentPane(),"Failed to retrieve ip for the Authentication Server. Are you connected to the Internet?");
-                    }
-                    authenticatorClient.setup();
-                    if(!authenticatorClient.isConnected()){
-                        JOptionPane.showMessageDialog(main.getContentPane(),"Couldn't connect to auth Server. Please try again later.");
-                        return;
-                    }
-                }
+                HttpResponse<String> response = null;
 
-                System.out.println("Connection");
+                try {
+                    JSONObject request = new JSONObject()
+                            .put("username",usernameField.getText())
+                            .put("displayName",displayNameCreation.getText())
+                            .put("email", email.getText())
+                            .put("password",passwordCreation.getText());
+                    response = Unirest.post("https://api.redstonerdev.io/auth/account/create")
+                            .body(request.toString()).asString();
 
-                JSONObject result = authenticatorClient.createAccount(usernameCreation.getText(), displayNameCreation.getText(),new String(passwordCreation.getPassword()),email.getText());
-                System.out.println(result);
-
-                switch (result.getString("data")) {
-                    case "account-created" -> {
+                    if(response.getStatus() == 200) {
                         actionInfo.setText("The account '" + usernameCreation.getText() + "' has been created.");
                         actionInfo.setForeground(Color.GREEN);
-                    }
-                    case "account-already-exists" -> {
-                        actionInfo.setText("The account '" + usernameCreation.getText() + "' already exists.");
+                        Notifications.getInstance().show(Notifications.Type.SUCCESS, Notifications.Location.TOP_CENTER,"Account created successfully.");
+                    } else {
+                        actionInfo.setText("Username or email already exist.");
                         actionInfo.setForeground(Color.RED);
+                        Notifications.getInstance().show(Notifications.Type.ERROR, Notifications.Location.TOP_CENTER,"Username or email already exist.");
                     }
+                } catch (UnirestException ex) {
+                    Notifications.getInstance().show(Notifications.Type.ERROR, Notifications.Location.TOP_CENTER,"An error Occurred. Please try again later.");
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -1022,6 +1173,7 @@ public class Main extends JFrame {
                 isLoggedIn = false;
                 loggedInAs.setText("Not logged in");
                 actionInfo.setText("Logged out.");
+                launch.setText("Launch (Offline)");
                 Notifications.getInstance().show(Notifications.Type.SUCCESS, Notifications.Location.TOP_CENTER,"Logged out.");
                 actionInfo.setForeground(Color.RED);
                 config.put("token",TOKEN);
@@ -1049,6 +1201,7 @@ public class Main extends JFrame {
                         passwordCreation.setEnabled(false);
                         email.setEnabled(false);
                         createButton.setEnabled(false);
+                        launch.setText("Launch (as " + displayname + ")");
                     } else {
                         loginButton.setEnabled(true);
                         logoutButton.setEnabled(false);
@@ -1061,6 +1214,7 @@ public class Main extends JFrame {
                         passwordCreation.setEnabled(true);
                         email.setEnabled(true);
                         createButton.setEnabled(true);
+                        launch.setText("Launch (Offline)");
                     }
                     try {
                         Thread.sleep(0);
@@ -1104,7 +1258,11 @@ public class Main extends JFrame {
                         System.out.println(launchJson.getString("launch").replace("%TOKEN%", TOKEN));
 
                         try {
-                            String startCommand = launchJson.getString("launch").replace("%TOKEN%", TOKEN);
+                            Path javaExe = new File("").toPath().resolve("lib/java.exe");
+
+                            String startCommand = launchJson.getString("launch")
+                                    .replace("%TOKEN%", TOKEN)
+                                    .replace("%java%", javaExe.toString());
 
                             System.out.println(new File(destination).getAbsolutePath());
 
@@ -1254,6 +1412,7 @@ public class Main extends JFrame {
 
     public static void main(String[] args) throws Exception {
         IntelliJTheme.setup(Main.class.getResourceAsStream("/themes/theme.purple.json"));
+        //IntelliJTheme.setup(Main.class.getResourceAsStream("/themes/dark-red.theme.json"));
         Notification.init();
         //UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
         File file = new File("odlauncher/config.json");
@@ -1352,6 +1511,13 @@ public class Main extends JFrame {
             JLabel game = new JLabel(profile.getGame().getName());
             JLabel version = new JLabel(profile.getVersion().getVersion());
 
+            boolean newVersion = false;
+            Version newestVersion = CacheRequest.getNewestVersion(profile.getGame());
+
+            if(!profile.getVersion().equals(newestVersion)){
+                newVersion = true;
+            }
+
             if(profile.getIcon() == null){
                 BufferedImage bf = new BufferedImage(60,60,1);
                 Graphics2D g = bf.createGraphics();
@@ -1382,6 +1548,12 @@ public class Main extends JFrame {
             panel.add(game);
             panel.add(version);
             panel.add(name);
+
+            if(newVersion) {
+                version.setForeground(Color.RED);
+                version.setText(version.getText() + " (" + newestVersion.getVersion() + ")");
+            }
+            else version.setForeground(Color.GREEN);
 
             layout.registerComponent(image,new Position(0,0),new Position(0,2));
             layout.registerComponent(name,new Position(2,0));
